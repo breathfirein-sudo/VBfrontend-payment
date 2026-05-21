@@ -1,0 +1,121 @@
+/* Design System for eBullion App */
+:root {
+  /* Colors */
+  --bg-main: #060309;
+  --bg-card: #150a21;
+  --bg-card-header: #200f33;
+  --bg-card-light: #2c1642;
+  --bg-ticker: #120524;
+  --color-gold: #d9af56;
+  --color-gold-hover: #e7c376;
+  --color-gold-dark: #b88e36;
+  --color-silver: #a09da5;
+  --color-platinum: #cbd5e1;
+  --color-palladium: #94a3b8;
+  --color-success: #10b981;
+  --color-danger: #ef4444;
+
+  /* Text Colors */
+  --text-primary: #ffffff;
+  --text-secondary: #9c93a8;
+  --text-muted: #6b6278;
+  --text-gold: #d9af56;
+
+  /* Fonts */
+  --font-sans: 'Plus Jakarta Sans', sans-serif;
+  --font-title: 'Outfit', sans-serif;
+
+  /* Transitions */
+  --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-fast: all 0.15s ease;
+
+  /* Borders & Shadows */
+  --border-glass: 1px solid rgba(217, 175, 86, 0.15);
+  --border-purple: 1px solid rgba(168, 85, 247, 0.2);
+  --shadow-gold-glow: 0 8px 30px rgba(217, 175, 86, 0.12);
+  --shadow-purple-glow: 0 8px 32px rgba(44, 22, 66, 0.5);
+  --radius-pill: 9999px;
+  --radius-lg: 16px;
+  --radius-md: 10px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  min-height: 100vh;
+  overflow-y: auto;
+}
+
+body {
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-main);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--bg-card-light);
+  border-radius: var(--radius-pill);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-gold-dark);
+}
+
+/* Reset list styles and links */
+ul,
+ol {
+  list-style: none;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+  transition: var(--transition-fast);
+}
+
+/* Responsive grid/flex containers */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+/* Form controls reset */
+input,
+button,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  outline: none;
+}
+
+button {
+  cursor: pointer;
+}
