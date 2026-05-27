@@ -173,18 +173,19 @@
 
 /* --- Live Prices Ticker --- */
 .ticker-bar {
-  background-color: var(--bg-ticker);
-  border-bottom: var(--border-purple);
-  padding: 12px 0;
+  background-color: #0d0617;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 10px 0;
   overflow: hidden;
   position: relative;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
 .ticker-track {
   display: flex;
-  gap: 40px;
+  gap: 32px;
   width: max-content;
-  animation: scroll-ticker 35s linear infinite;
+  animation: scroll-ticker 50s linear infinite;
 }
 
 .ticker-track:hover {
@@ -192,53 +193,51 @@
 }
 
 @keyframes scroll-ticker {
-  0% {
-    transform: translateX(0);
-  }
-
-  100% {
-    transform: translateX(-50%);
-  }
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
 }
 
 .ticker-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 12px;
+  gap: 12px;
+  font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
-  padding: 0 10px;
-  border-right: 1px solid rgba(156, 147, 168, 0.2);
-}
-
-.ticker-item:last-child {
-  border-right: none;
+  white-space: nowrap;
 }
 
 .ticker-name {
-  color: var(--text-secondary);
+  color: #a79cb8;
 }
 
 .ticker-val {
-  color: var(--text-primary);
+  color: #ffffff;
   font-weight: 700;
 }
 
 .ticker-change {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
   font-size: 11px;
+  font-weight: 600;
 }
 
 .ticker-change.up {
-  color: var(--color-success);
+  color: #0fd27f;
 }
 
 .ticker-change.down {
-  color: var(--color-danger);
+  color: #ef4444;
+}
+
+.ticker-separator {
+  color: rgba(255, 255, 255, 0.15);
+  font-size: 14px;
+  font-weight: 300;
+  margin-left: 20px;
 }
 
 /* --- Main Layout Grid --- */
@@ -2081,7 +2080,7 @@
 }
 
 .mock-chart-container {
-  height: 210px;
+  height: 400px;
   background-color: rgba(0,0,0,0.15);
   border-radius: 18px;
   overflow: hidden;
@@ -2637,4 +2636,79 @@
   .holdings-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* Custom Interval Dropdown */
+.interval-dropdown-container {
+  position: relative;
+  display: inline-block;
+  font-family: -apple-system, BlinkMacSystemFont, 'Trebuchet MS', Roboto, Ubuntu, sans-serif;
+}
+
+.interval-dropdown-trigger {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #f8fafc;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+.interval-dropdown-trigger:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.interval-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  min-width: 180px;
+  z-index: 1000;
+  padding: 8px 0;
+  margin-top: 4px;
+}
+
+.interval-menu-header {
+  font-size: 11px;
+  color: #64748b;
+  padding: 4px 16px;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  text-align: left;
+}
+
+.interval-menu-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #0f172a;
+}
+.interval-menu-item:hover {
+  background: #f8fafc;
+}
+.interval-menu-item.selected {
+  color: #2962ff;
+}
+
+.interval-star {
+  color: #cbd5e1;
+  transition: color 0.2s;
+}
+.interval-star:hover {
+  color: #94a3b8;
+}
+.interval-star.favorite {
+  color: #fbbf24;
+  fill: #fbbf24;
 }

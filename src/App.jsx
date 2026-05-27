@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import RazorpayButton from './components/Payment/RazorpayButton';
 import {
   ChevronDown,
   ArrowRightLeft,
@@ -21,16 +22,20 @@ import {
   Briefcase,
   ArrowUpRight,
   ArrowDownLeft,
+  ArrowDownRight,
   Download,
   Check,
   Lock,
   RefreshCw,
   CreditCard,
-  Gem
+  Gem,
+  Star
 } from 'lucide-react';
 import heroGoldOre from './assets/hero_gold_ore.png';
 import './App.css';
 import AboutUs from './AboutUs';
+import TradingViewWidget from './charts/TradingViewWidget';
+import LiveChartWidget from './components/LiveChart/LiveChartWidget';
 import {
   createAllMetalRates,
   createInitialHoldings,
@@ -52,6 +57,69 @@ const INITIAL_RATES = {
   platinum: { price: 7358.14, change: 12.45, pct: 0.17 },
   iron: { price: 52.10, change: -0.58, pct: -1.10 },
   gold: { price: 6143.57, change: 48.96, pct: 0.80 }
+};
+
+const IntervalDropdown = ({ value, onChange }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [favorites, setFavorites] = useState(['1', '30']);
+  
+  const minutes = [
+    { value: '1', label: '1 minute' },
+    { value: '3', label: '3 minutes' },
+    { value: '5', label: '5 minutes' },
+    { value: '15', label: '15 minutes' },
+    { value: '30', label: '30 minutes' },
+    { value: '45', label: '45 minutes' }
+  ];
+
+  const getDisplayValue = () => {
+    if (value === '240') return '4h';
+    if (value === '60') return '1h';
+    return value + 'm';
+  };
+
+  return (
+    <div className="interval-dropdown-container">
+      <button 
+        type="button" 
+        className="interval-dropdown-trigger" 
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        {getDisplayValue()}
+        <ChevronDown size={14} style={{ marginLeft: 4 }} />
+      </button>
+
+      {isOpen && (
+        <div className="interval-dropdown-menu">
+          <div className="interval-menu-header">MINUTES</div>
+          {minutes.map((item) => (
+            <div 
+              key={item.value} 
+              className={`interval-menu-item ${value === item.value ? 'selected' : ''}`}
+              onClick={() => {
+                onChange(item.value);
+                setIsOpen(false);
+              }}
+            >
+              <span>{item.label}</span>
+              <Star 
+                size={16} 
+                className={`interval-star ${favorites.includes(item.value) ? 'favorite' : ''}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setFavorites(prev => 
+                    prev.includes(item.value) 
+                      ? prev.filter(f => f !== item.value)
+                      : [...prev, item.value]
+                  );
+                }}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 };
 
 function App() {
@@ -126,6 +194,7 @@ function App() {
   const [rupees, setRupees] = useState('');
   const [grams, setGrams] = useState('');
   const [lastEdited, setLastEdited] = useState('rupees'); // 'rupees' or 'grams'
+  const [chartInterval, setChartInterval] = useState('240'); // Default 4h
 
 
   // Header Dropdowns Open State
@@ -204,9 +273,9 @@ function App() {
     if (user && user.email !== 'shivaram33987@gmail.com') {
       const match = clients.find(c => c.email.toLowerCase() === user.email.toLowerCase());
       if (match) {
-        setWalletBalance(match.walletBalance);
-        setHoldings(match.holdings);
-        setTransactions(match.transactions);
+        setWalletBalance(match.walletBalance || 0);
+        setHoldings(createInitialHoldings(match.holdings || {}));
+        setTransactions(match.transactions || []);
       } else {
         const cRecord = {
           id: `CUST-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -214,7 +283,7 @@ function App() {
           email: user.email,
           phone: '',
           walletBalance: 0,
-          holdings: {},
+          holdings: createInitialHoldings({}),
           kycStatus: 'Pending',
           transactions: []
         };
@@ -414,7 +483,6 @@ function App() {
     const finalGrams = parseFloat(grams) || 0;
 
     if (finalRupees <= 0) {
-      alert("Please enter a valid amount or metal weight.");
       return;
     }
 
@@ -438,8 +506,8 @@ function App() {
 
   const confirmTransaction = () => {
     if (view === 'dashboard' || view === 'about') {
-      const finalRupees = parseFloat(rupees) || modalData.subtotal || 0;
-      const finalGrams = parseFloat(grams) || modalData.weight || 0;
+      const finalRupees = parseFloat(rupees) || parseFloat(modalData.subtotal) || 0;
+      const finalGrams = parseFloat(grams) || parseFloat(modalData.weight) || 0;
       const asset = modalData.asset;
       const action = modalData.action;
 
@@ -447,7 +515,6 @@ function App() {
         const gst = finalRupees * 0.18;
         const totalCost = finalRupees + gst;
         if (walletBalance < totalCost) {
-          alert("Insufficient funds in your vault wallet. Please deposit funds first.");
           setShowModal(false);
           return;
         }
@@ -599,7 +666,7 @@ function App() {
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        setOtpError(data.error || "Invalid OTP code. Please check your Gmail or resend code.");
+        setOtpError(data.error || "Invalid OTP code. Please check your email or resend code.");
         return;
       }
 
@@ -607,7 +674,6 @@ function App() {
 
       // OTP Verified! Log user in
       if (authForm.email.toLowerCase() === 'shivaram33987@gmail.com' && authForm.password === 'Shiva@143') {
-        alert("OTP Verified Successfully! Welcoming Super Admin to VB Commodity Vault Monitor.");
         setUser({ email: 'shivaram33987@gmail.com', uid: 'admin-super-uid', displayName: 'Super Admin' });
         setView('dashboard');
         setOtpStep('login');
@@ -616,7 +682,6 @@ function App() {
 
       try {
         const userCredential = await signInWithEmailAndPassword(auth, authForm.email, authForm.password);
-        alert(`OTP Verified Successfully! Welcoming you to your vault: ${userCredential.user.email}`);
         setView('dashboard');
         setOtpStep('login');
       } catch (error) {
@@ -715,11 +780,9 @@ function App() {
       await signOut(auth);
       setUser(null);
       setView('home');
-      alert("Vault secured and session terminated successfully.");
     } catch (error) {
       setUser(null);
       setView('home');
-      alert("Sign out session secured.");
     }
   };
 
@@ -1402,10 +1465,34 @@ function App() {
       </div>
     );
   }
+  const renderTickerItems = (prefix) =>
+    Object.keys(rates).flatMap((asset) => {
+      const data = rates[asset];
+      return [
+        <div className="ticker-item" key={`${prefix}-${asset}-1`}>
+          <span className="ticker-name">{getAssetLabel(asset)}</span>
+          <span className="ticker-val">{'\u20b9'}{data.price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+          <span className={`ticker-change ${data.change >= 0 ? 'up' : 'down'}`}>
+            {data.change >= 0 ? <ArrowUpRight size={14} strokeWidth={2.5} /> : <ArrowDownRight size={14} strokeWidth={2.5} />}
+            {data.change >= 0 ? '+' : ''}{data.change.toFixed(2)} ({data.pct >= 0 ? '+' : ''}{data.pct.toFixed(2)}%)
+          </span>
+          <span className="ticker-separator">|</span>
+        </div>,
+        <div className="ticker-item" key={`${prefix}-${asset}-2`}>
+          <span className="ticker-name">{getAssetLabel(asset)}</span>
+          <span className="ticker-val">{'\u20b9'}{data.price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+          <span className={`ticker-change ${data.change >= 0 ? 'up' : 'down'}`}>
+            {data.change >= 0 ? <ArrowUpRight size={14} strokeWidth={2.5} /> : <ArrowDownRight size={14} strokeWidth={2.5} />}
+            {data.change >= 0 ? '+' : ''}{data.change.toFixed(2)} ({data.pct >= 0 ? '+' : ''}{data.pct.toFixed(2)}%)
+          </span>
+          <span className="ticker-separator">|</span>
+        </div>,
+      ];
+    });
 
   if (view === 'dashboard') {
-    const goldVal = holdings.gold * rates.gold.price;
-    const silverVal = holdings.silver * rates.silver.price;
+    const goldVal = (holdings?.gold || 0) * rates.gold.price;
+    const silverVal = (holdings?.silver || 0) * rates.silver.price;
     const totalValuation = goldVal + silverVal + walletBalance;
 
     return (
@@ -1443,7 +1530,7 @@ function App() {
                 className="dash-nav-item"
                 onClick={() => setView('about')}
               >
-                <Gem size={16} /> About Us
+                <Gem size={16} /> Explore Elements
               </button>
               <button 
                 className={`dash-nav-item ${dashTab === 'profile' ? 'active' : ''}`}
@@ -1471,29 +1558,31 @@ function App() {
             {Object.entries(rates).map(([key, data]) => (
               <div className="ticker-item" key={`dash-t1-${key}`}>
                 <span className="ticker-name">{key}</span>
-                <span className="ticker-val">₹{data.price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                <span className="ticker-val">{'₹'}{data.price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 <span className={`ticker-change ${data.change >= 0 ? 'up' : 'down'}`}>
-                  {data.change >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                  {data.change >= 0 ? <ArrowUpRight size={14} strokeWidth={2.5} /> : <ArrowDownRight size={14} strokeWidth={2.5} />}
                   {data.change >= 0 ? '+' : ''}{data.change.toFixed(2)} ({data.pct >= 0 ? '+' : ''}{data.pct.toFixed(2)}%)
                 </span>
+                <span className="ticker-separator">|</span>
               </div>
             ))}
             {/* Duplicate for scrolling */}
             {Object.entries(rates).map(([key, data]) => (
               <div className="ticker-item" key={`dash-t2-${key}`}>
                 <span className="ticker-name">{key}</span>
-                <span className="ticker-val">₹{data.price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                <span className="ticker-val">{'\u20b9'}{data.price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 <span className={`ticker-change ${data.change >= 0 ? 'up' : 'down'}`}>
-                  {data.change >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                  {data.change >= 0 ? <ArrowUpRight size={14} strokeWidth={2.5} /> : <ArrowDownRight size={14} strokeWidth={2.5} />}
                   {data.change >= 0 ? '+' : ''}{data.change.toFixed(2)} ({data.pct >= 0 ? '+' : ''}{data.pct.toFixed(2)}%)
                 </span>
+                <span className="ticker-separator">|</span>
               </div>
             ))}
           </div>
         </div>
 
         {/* Dashboard Views Container */}
-        <main className="dashboard-content container">
+        <main className={`dashboard-content ${dashTab === 'trade' ? 'fluid-container' : 'container'}`}>
           {dashTab === 'portfolio' && (
             <div className="tab-pane-view portfolio-view animate-fade-in">
               <div className="portfolio-hero-grid">
@@ -1544,7 +1633,7 @@ function App() {
                     <h4>Gold Vault</h4>
                     <span className="symbol-label">AU</span>
                   </div>
-                  <div className="holding-weight">{holdings.gold.toFixed(4)} <span className="grams-lbl">g</span></div>
+                  <div className="holding-weight">{(holdings?.gold || 0).toFixed(4)} <span className="grams-lbl">g</span></div>
                   <div className="holding-value">₹{goldVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                   <div className="holding-action-row">
                     <span className="live-pricing-indicator">₹{rates.gold.price.toFixed(2)}/g</span>
@@ -1558,7 +1647,7 @@ function App() {
                     <h4>Silver Vault</h4>
                     <span className="symbol-label">AG</span>
                   </div>
-                  <div className="holding-weight">{holdings.silver.toFixed(4)} <span className="grams-lbl">g</span></div>
+                  <div className="holding-weight">{(holdings?.silver || 0).toFixed(4)} <span className="grams-lbl">g</span></div>
                   <div className="holding-value">₹{silverVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                   <div className="holding-action-row">
                     <span className="live-pricing-indicator">₹{rates.silver.price.toFixed(2)}/g</span>
@@ -1616,115 +1705,15 @@ function App() {
 
           {dashTab === 'trade' && (
             <div className="tab-pane-view trade-view animate-fade-in">
-              <div className="grid-2col trade-layout-grid">
-                <div className="live-trend-card">
-                  <div className="trend-card-header">
-                    <div className="trend-meta">
-                      <h3>{getAssetLabel(activeAsset)} Market Dynamics</h3>
-                      <span className="live-pricing-tag">{'\u20b9'}{rates[activeAsset].price.toFixed(2)}/g</span>
-                    </div>
-                    <button type="button" className="btn-refresh" onClick={() => alert('Market rates refreshed live.')}><RefreshCw size={14} /></button>
-                  </div>
-                  <div className="mock-chart-container">
-                    <div className="chart-toolbar">
-                      <div className="chart-toolbar-left">
-                        <span className="ticker-chip">TSLA · 4h</span>
-                        <span className="chart-label">TradingView</span>
-                      </div>
-                      <button type="button" className="btn-chart-trade">Trade</button>
-                    </div>
-                    <svg viewBox="0 0 400 180" className="mock-svg-chart">
-                      <defs>
-                        <linearGradient id="gridFade" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.08" />
-                          <stop offset="100%" stopColor="#ffffff" stopOpacity="0.02" />
-                        </linearGradient>
-                      </defs>
-                      <rect x="0" y="0" width="400" height="180" fill="url(#gridFade)" />
-                      <g stroke="#ffffff" strokeOpacity="0.12" strokeWidth="1">
-                        <line x1="20" y1="30" x2="380" y2="30" />
-                        <line x1="20" y1="60" x2="380" y2="60" />
-                        <line x1="20" y1="90" x2="380" y2="90" />
-                        <line x1="20" y1="120" x2="380" y2="120" />
-                        <line x1="20" y1="150" x2="380" y2="150" />
-                      </g>
-                      <g fill="#d9af56" opacity="0.9">
-                        <rect x="52" y="95" width="10" height="40" rx="2" />
-                        <rect x="86" y="65" width="10" height="70" rx="2" />
-                        <rect x="120" y="83" width="10" height="52" rx="2" />
-                        <rect x="154" y="58" width="10" height="77" rx="2" />
-                        <rect x="188" y="72" width="10" height="63" rx="2" />
-                        <rect x="222" y="45" width="10" height="90" rx="2" />
-                        <rect x="256" y="68" width="10" height="67" rx="2" />
-                        <rect x="290" y="85" width="10" height="50" rx="2" />
-                        <rect x="324" y="55" width="10" height="80" rx="2" />
-                      </g>
-                      <path d="M 24,150 L 52,135 L 86,120 L 120,132 L 154,108 L 188,122 L 222,96 L 256,118 L 290,104 L 324,86 L 376,52"
-                            fill="none" stroke="#f9d97c" strokeWidth="3" strokeLinecap="round" />
-                    </svg>
-                  </div>
-                  <div className="market-stats-grid">
-                    <div className="m-stat"><span className="stat-label">Daily Range</span><span className="stat-val">{'\u20b9'}{(rates[activeAsset].price * 0.985).toFixed(2)} - {'\u20b9'}{(rates[activeAsset].price * 1.012).toFixed(2)}</span></div>
-                    <div className="m-stat"><span className="stat-label">24h Vol</span><span className="stat-val">84.28 kg</span></div>
-                    <div className="m-stat"><span className="stat-label">GST Tax</span><span className="stat-val">18.0% standard</span></div>
-                    <div className="m-stat"><span className="stat-label">Vaulting</span><span className="stat-val">Fully Insured</span></div>
-                  </div>
+              <div style={{ display: 'flex', gap: '30px', width: '100%', padding: '0 40px', boxSizing: 'border-box' }}>
+                <div style={{ width: '260px', flexShrink: 0, alignSelf: 'flex-start', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', padding: '20px' }}>
+                  <h3 style={{ color: '#d9af56', fontSize: '14px', fontWeight: 'bold', margin: '0 0 10px 0', textAlign: 'center' }}>Disclaimer</h3>
+                  <p style={{ lineHeight: '1.6', margin: 0, color: '#d9af56', fontSize: '12.5px' }}>
+                    Past performance in paper trading does not guarantee future results in real trading. Users are solely responsible for their investment and trading decisions. This platform does not provide financial, investment or legal advice. This is completely based on your technical knowledge and only for practice session.
+                  </p>
                 </div>
-                <div className="widget-column">
-                  <div className="trade-card dash-trade-card">
-                    <div className="asset-tabs portal-asset-tabs">
-                      {PORTAL_TRADE_ASSETS.map((asset) => (
-                        <button key={asset} type="button" className={`tab-btn ${activeAsset === asset ? 'active' : ''}`} onClick={() => setActiveAsset(asset)}>{getAssetLabel(asset)}</button>
-                      ))}
-                    </div>
-                    <div className="price-display-box">
-                      <div className={`current-price ${priceFlash ? 'glowing' : ''}`} style={priceFlash ? { color: '#e7c376' } : {}}>
-                        {'\u20b9'}{rates[activeAsset].price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/g
-                      </div>
-                      <div className="live-rates-indicator"><span className="live-dot"></span><span>Live Rates</span></div>
-                      <div className="price-subtext">Additional 18% GST applicable</div>
-                    </div>
-                    <div className="action-tabs">
-                      <button type="button" className={`action-tab-btn buy ${activeAction === 'buy' ? 'active' : ''}`} onClick={() => setActiveAction('buy')}>Buy</button>
-                      <button type="button" className={`action-tab-btn sell ${activeAction === 'sell' ? 'active' : ''}`} onClick={() => setActiveAction('sell')}>Sell</button>
-                    </div>
-                    <div className="form-section">
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '14px', borderBottom: '1px solid rgba(18, 5, 36, 0.08)', paddingBottom: '10px' }}>
-                        <div className="form-label" style={{ color: '#120524', margin: 0, fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span>Wallet Balance:</span>
-                          <span style={{ fontSize: '15px', color: '#10b981' }}>{'\u20b9'}{walletBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                        </div>
-                        <div style={{ color: '#4a3764', fontSize: '12.5px', fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span>Vault Holdings ({getAssetLabel(activeAsset)}):</span>
-                          <span style={{ color: '#b88e36', fontWeight: 700 }}>{(holdings[activeAsset] ?? 0).toFixed(4)} g</span>
-                        </div>
-                        <div style={{ color: '#7a6a90', fontSize: '11px', fontWeight: 500, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span>Holdings Value:</span>
-                          <span>{'\u20b9'}{((holdings[activeAsset] || 0) * rates[activeAsset].price).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        </div>
-                      </div>
-                      <div className="input-row">
-                        <div className="input-group">
-                          <label htmlFor="dash-rupees-input">Rupees</label>
-                          <input id="dash-rupees-input" className="input-field" type="number" placeholder="Rupees" value={rupees} onChange={(e) => handleRupeesChange(e.target.value)} />
-                        </div>
-                        <button type="button" className="btn-swap" onClick={handleSwapFields} title="Swap inputs"><ArrowRightLeft size={16} /></button>
-                        <div className="input-group">
-                          <label htmlFor="dash-grams-input">Grams</label>
-                          <input id="dash-grams-input" className="input-field" type="number" placeholder="Grams" value={grams} onChange={(e) => handleGramsChange(e.target.value)} />
-                        </div>
-                      </div>
-                      <div className="quick-pills">
-                        {[100, 500, 1000, 5000].map((amount) => (
-                          <button key={amount} type="button" className="pill-btn" onClick={() => handleQuickPill(amount)}>{'\u20b9'}{amount}</button>
-                        ))}
-                      </div>
-                      <div className="form-actions">
-                        <button type="button" className="btn-submit-buy" onClick={() => handleTransactionSubmit(activeAction)}>{activeAction === 'buy' ? 'Buy Asset' : 'Sell Asset'}</button>
-                        <button type="button" className="btn-submit-sip" onClick={() => handleTransactionSubmit('sip')}>Start Metal SIP</button>
-                      </div>
-                    </div>
-                  </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <LiveChartWidget />
                 </div>
               </div>
             </div>
@@ -1755,14 +1744,16 @@ function App() {
                           <span className="currency-symbol">{'\u20b9'}</span>
                           <input type="number" placeholder="Enter amount to add" value={depositAmount} onChange={(e) => setDepositAmount(e.target.value)} />
                         </div>
-                        <button type="button" className="btn-funding-submit deposit" onClick={() => {
-                          const val = parseFloat(depositAmount);
-                          if (isNaN(val) || val <= 0) { alert('Please enter a valid deposit amount.'); return; }
-                          setWalletBalance((prev) => parseFloat((prev + val).toFixed(2)));
-                          setTransactions((prev) => [{ id: `TX-${Math.floor(1000 + Math.random() * 9000)}`, type: 'deposit', asset: 'wallet', amount: val, weight: 0, date: new Date().toISOString().slice(0, 16).replace('T', ' '), status: 'Completed' }, ...prev]);
-                          setDepositAmount('');
-                          alert(`Success! Deposited \u20b9${val.toLocaleString()} to your secure wallet.`);
-                        }}><Plus size={16} /> Deposit Funds</button>
+                        <RazorpayButton 
+                          amount={parseFloat(depositAmount) || 0} 
+                          type="deposit" 
+                          onSuccess={(data) => {
+                            const val = parseFloat(depositAmount);
+                            setWalletBalance((prev) => parseFloat((prev + val).toFixed(2)));
+                            setTransactions((prev) => [{ id: `TX-${Math.floor(1000 + Math.random() * 9000)}`, type: 'deposit', asset: 'wallet', amount: val, weight: 0, date: new Date().toISOString().slice(0, 16).replace('T', ' '), status: 'Completed' }, ...prev]);
+                            setDepositAmount('');
+                          }}
+                        />
                       </div>
                       <div className="funding-input-group">
                         <label>Withdraw Amount (INR)</label>
@@ -1770,15 +1761,21 @@ function App() {
                           <span className="currency-symbol">{'\u20b9'}</span>
                           <input type="number" placeholder="Enter amount to withdraw" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} />
                         </div>
-                        <button type="button" className="btn-funding-submit withdraw" onClick={() => {
-                          const val = parseFloat(withdrawAmount);
-                          if (isNaN(val) || val <= 0) { alert('Please enter a valid withdrawal amount.'); return; }
-                          if (walletBalance < val) { alert('Insufficient balance in your secure wallet.'); return; }
-                          setWalletBalance((prev) => parseFloat((prev - val).toFixed(2)));
-                          setTransactions((prev) => [{ id: `TX-${Math.floor(1000 + Math.random() * 9000)}`, type: 'withdrawal', asset: 'wallet', amount: val, weight: 0, date: new Date().toISOString().slice(0, 16).replace('T', ' '), status: 'Completed' }, ...prev]);
-                          setWithdrawAmount('');
-                          alert(`Success! Initiated withdrawal of \u20b9${val.toLocaleString()} to verified bank account.`);
-                        }}><Minus size={16} /> Withdraw Funds</button>
+                        <RazorpayButton 
+                          amount={parseFloat(withdrawAmount) || 0} 
+                          type="withdraw" 
+                          onSuccess={(data) => {
+                            const val = parseFloat(withdrawAmount);
+                            setWalletBalance((prev) => parseFloat((prev - val).toFixed(2)));
+                            setTransactions((prev) => [{ id: `TX-${Math.floor(1000 + Math.random() * 9000)}`, type: 'withdrawal', asset: 'wallet', amount: val, weight: 0, date: new Date().toISOString().slice(0, 16).replace('T', ' '), status: 'Completed' }, ...prev]);
+                            setWithdrawAmount('');
+                          }}
+                          onError={(err) => {
+                            if (err?.response?.data?.error === 'Insufficient wallet balance' || walletBalance < parseFloat(withdrawAmount)) {
+                               alert('Insufficient balance in your secure wallet.');
+                            }
+                          }}
+                        />
                       </div>
                     </div>
                   </div>
@@ -2100,6 +2097,12 @@ function App() {
                 </button>
                 <button 
                   className="dash-nav-item"
+                  onClick={() => setView('about')}
+                >
+                  <Gem size={16} /> Explore Elements
+                </button>
+                <button 
+                  className="dash-nav-item"
                   onClick={() => { setView('dashboard'); setDashTab('profile'); }}
                 >
                   <User size={16} /> Vault Profile
@@ -2122,7 +2125,7 @@ function App() {
             )}
           </div>
         </header>
-        <AboutUs rates={rates} holdings={holdings} walletBalance={walletBalance} isLoggedIn={!!user} onRequireAuth={() => setView('auth')} onTradeRequest={handleAboutTradeRequest} />
+        <AboutUs rates={rates} holdings={holdings} walletBalance={walletBalance} isLoggedIn={!!user} onRequireAuth={() => setView('auth')} onTradeRequest={handleAboutTradeRequest} onExplore={() => { setDashTab('trade'); setView('dashboard'); }} />
         {showModal && (
           <div className="modal-overlay">
             <div className="modal-content">
@@ -2156,29 +2159,6 @@ function App() {
     );
   }
 
-  const renderTickerItems = (prefix) =>
-    PORTAL_TRADE_ASSETS.flatMap((asset) => {
-      const data = rates[asset];
-      return [
-        <div className="ticker-item" key={`${prefix}-${asset}-1`}>
-          <span className="ticker-name">{getAssetLabel(asset)}</span>
-          <span className="ticker-val">{'\u20b9'}{data.price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-          <span className={`ticker-change ${data.change >= 0 ? 'up' : 'down'}`}>
-            {data.change >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-            {data.change >= 0 ? '+' : ''}{data.change.toFixed(2)} ({data.pct >= 0 ? '+' : ''}{data.pct.toFixed(2)}%)
-          </span>
-        </div>,
-        <div className="ticker-item" key={`${prefix}-${asset}-2`}>
-          <span className="ticker-name">{getAssetLabel(asset)}</span>
-          <span className="ticker-val">{'\u20b9'}{data.price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-          <span className={`ticker-change ${data.change >= 0 ? 'up' : 'down'}`}>
-            {data.change >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-            {data.change >= 0 ? '+' : ''}{data.change.toFixed(2)} ({data.pct >= 0 ? '+' : ''}{data.pct.toFixed(2)}%)
-          </span>
-        </div>,
-      ];
-    });
-
   return (
     <div id="root">
       <header className="header">
@@ -2189,7 +2169,7 @@ function App() {
           </div>
           <nav className="nav-menu">
             <a href="#home" className="nav-item active">Home</a>
-            <a href="#about" className="nav-item" onClick={(e) => { e.preventDefault(); setView('about'); }}>About Us</a>
+            <a href="#about" className="nav-item" onClick={(e) => { e.preventDefault(); setView('about'); }}>Explore Elements</a>
           </nav>
           <button type="button" className="btn-signin" onClick={() => setView('auth')}>Sign In / Sign Up</button>
         </div>
