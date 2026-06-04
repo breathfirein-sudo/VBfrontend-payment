@@ -351,7 +351,7 @@ function App() {
   };
 
   useEffect(() => {
-    if (user && user.email === 'shivaram33987@gmail.com' && adminTab === 'contest') {
+    if (user && user.email === 'sandeepkumar.pikili@vrpigroup.co.in' && adminTab === 'contest') {
       fetchAdminContestData();
     }
   }, [user, adminTab]);
@@ -418,7 +418,7 @@ function App() {
   // --- Super Admin & Client Shared Sync Handlers ---
   // Whenever the active logged-in standard customer state changes, sync back to clients database!
   useEffect(() => {
-    if (user && user.email !== 'shivaram33987@gmail.com') {
+    if (user && user.email !== 'sandeepkumar.pikili@vrpigroup.co.in') {
       setClients(prev => {
         const next = prev.map(c => {
           if (c.email.toLowerCase() === user.email.toLowerCase()) {
@@ -440,7 +440,7 @@ function App() {
 
   // Load client stats from clients database upon successful login
   useEffect(() => {
-    if (user && user.email !== 'shivaram33987@gmail.com') {
+    if (user && user.email !== 'sandeepkumar.pikili@vrpigroup.co.in') {
       const match = clients.find(c => c.email.toLowerCase() === user.email.toLowerCase());
       if (match) {
         setWalletBalance(match.walletBalance || 0);
@@ -474,9 +474,9 @@ function App() {
 
   // --- Real-time Day-to-day Transactions Simulator for Super Admin ---
   useEffect(() => {
-    if (user && user.email === 'shivaram33987@gmail.com') {
+    if (user && user.email === 'sandeepkumar.pikili@vrpigroup.co.in') {
       const interval = setInterval(() => {
-        const activeClientsList = clients.filter(c => c.email !== 'shivaram33987@gmail.com');
+        const activeClientsList = clients.filter(c => c.email !== 'sandeepkumar.pikili@vrpigroup.co.in');
         if (activeClientsList.length === 0) return;
         
         const randomClient = activeClientsList[Math.floor(Math.random() * activeClientsList.length)];
@@ -831,8 +831,8 @@ function App() {
     setOtpSending(true);
 
     // Super Admin login check
-    if (authForm.email.toLowerCase() === 'shivaram33987@gmail.com' && authForm.password === 'Shiva@143') {
-      const localUser = { email: 'shivaram33987@gmail.com', uid: 'admin-super-uid', displayName: 'Super Admin' };
+    if (authForm.email.toLowerCase() === 'sandeepkumar.pikili@vrpigroup.co.in' && authForm.password === 'Psk@300707') {
+      const localUser = { email: 'sandeepkumar.pikili@vrpigroup.co.in', uid: 'admin-super-uid', displayName: 'Super Admin' };
       localStorage.setItem('vb_local_user', JSON.stringify(localUser));
       setUser(localUser);
       setView('dashboard');
@@ -974,7 +974,7 @@ function App() {
     );
   }
 
-  const isAdmin = user && user.email === 'shivaram33987@gmail.com';
+  const isAdmin = user && user.email === 'sandeepkumar.pikili@vrpigroup.co.in';
 
   if (view === 'dashboard' && isAdmin) {
     // Collect all transactions from clients database for system-wide display
@@ -1045,7 +1045,7 @@ function App() {
                 <span style={{ fontSize: '12px', color: '#f43f5e', fontWeight: 600 }}>LIVE TRACKING</span>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '14px', fontWeight: '700', color: '#ffffff' }}>shivaram33987@gmail.com</div>
+                <div style={{ fontSize: '14px', fontWeight: '700', color: '#ffffff' }}>sandeepkumar.pikili@vrpigroup.co.in</div>
                 <div style={{ fontSize: '11px', color: '#d9af56', fontWeight: 600 }}>Master Administrator</div>
               </div>
               <button 
@@ -3110,7 +3110,7 @@ function App() {
             <div className="dash-user-badge" style={{ cursor: 'pointer' }} onClick={() => setView('dashboard')}>
               <div className="user-info-text">
                 <span className="user-email-text">{user.email}</span>
-                <span className="kyc-badge">{user.email === 'shivaram33987@gmail.com' ? 'ADMIN' : 'KYC SECURED'}</span>
+                <span className="kyc-badge">{user.email === 'sandeepkumar.pikili@vrpigroup.co.in' ? 'ADMIN' : 'KYC SECURED'}</span>
               </div>
             </div>
           ) : (
