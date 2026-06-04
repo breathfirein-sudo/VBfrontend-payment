@@ -51,12 +51,6 @@ const TradingChart = forwardRef(({ data, volumeData, backgroundColor = 'transpar
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
-    const handleResize = () => {
-      if (chartRef.current && chartContainerRef.current) {
-        chartRef.current.applyOptions({ width: chartContainerRef.current.clientWidth });
-      }
-    };
-
     const chart = createChart(chartContainerRef.current, {
       layout: {
         background: { type: ColorType.Solid, color: backgroundColor },
@@ -66,7 +60,7 @@ const TradingChart = forwardRef(({ data, volumeData, backgroundColor = 'transpar
         vertLines: { color: 'rgba(42, 46, 57, 0.3)' },
         horzLines: { color: 'rgba(42, 46, 57, 0.3)' },
       },
-      width: chartContainerRef.current.clientWidth,
+      width: chartContainerRef.current.clientWidth || 300,
       height: 400,
       timeScale: {
         timeVisible: true,
@@ -106,10 +100,17 @@ const TradingChart = forwardRef(({ data, volumeData, backgroundColor = 'transpar
       volumeSeries.setData(volumeData);
     }
 
-    window.addEventListener('resize', handleResize);
+    const resizeObserver = new ResizeObserver((entries) => {
+      if (!entries || entries.length === 0) return;
+      const { width } = entries[0].contentRect;
+      if (chartRef.current && width > 0) {
+        chartRef.current.applyOptions({ width });
+      }
+    });
+    resizeObserver.observe(chartContainerRef.current);
 
     return () => {
-      window.removeEventListener('resize', handleResize);
+      resizeObserver.disconnect();
       chart.remove();
     };
   }, [data, volumeData, backgroundColor, textColor]);
@@ -117,7 +118,7 @@ const TradingChart = forwardRef(({ data, volumeData, backgroundColor = 'transpar
   return (
     <div
       ref={chartContainerRef}
-      style={{ width: '100%', height: '100%', position: 'relative' }}
+      style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}
     />
   );
 });

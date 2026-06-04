@@ -59,7 +59,7 @@ const RazorpayButton = ({ amount, type, onSuccess, onError }) => {
         key: orderData.keyId, // Using the key provided by the backend
         amount: orderData.amount,
         currency: orderData.currency,
-        name: 'VB Secure Wallet',
+        name: 'Investhour Secure Wallet',
         description: 'Fund Deposit',
         order_id: orderData.orderId,
         handler: async (response) => {
@@ -85,12 +85,12 @@ const RazorpayButton = ({ amount, type, onSuccess, onError }) => {
           }
         },
         prefill: {
-          name: 'VB Customer',
+          name: 'Investhour Customer',
           email: 'customer@example.com',
           contact: '9999999999'
         },
         theme: {
-          color: '#10b981' // Matching VB's green theme for deposits
+          color: '#10b981' // Matching Investhour's green theme for deposits
         }
       };
 

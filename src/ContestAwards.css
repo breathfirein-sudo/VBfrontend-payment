@@ -1,0 +1,410 @@
+/* Contest Awards Dashboard Styling */
+
+.contest-dashboard-container {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  width: 100%;
+  color: #ffffff;
+  animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Header Banner Card */
+.contest-hero-card {
+  background: linear-gradient(135deg, #1e0b36 0%, #110520 100%);
+  border: 1px solid rgba(217, 175, 86, 0.2);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  border-radius: 16px;
+  padding: 30px;
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 24px;
+  align-items: center;
+}
+
+.contest-hero-info h2 {
+  font-size: 26px;
+  font-weight: 800;
+  margin: 0 0 8px 0;
+  background: linear-gradient(90deg, #ffffff 0%, #d9af56 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.contest-hero-info p {
+  color: #9c93a8;
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.contest-stat-box {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.contest-stat-label {
+  font-size: 11px;
+  color: #9c93a8;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 8px;
+}
+
+.contest-stat-value {
+  font-size: 24px;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.contest-stat-value.gold {
+  color: #d9af56;
+  text-shadow: 0 0 10px rgba(217, 175, 86, 0.3);
+}
+
+.contest-stat-value.green {
+  color: #10b981;
+}
+
+/* User Progress Track Container */
+.contest-progress-section {
+  background: #120524;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 24px;
+}
+
+.progress-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.progress-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.progress-pct {
+  font-size: 14px;
+  font-weight: 800;
+  color: #d9af56;
+}
+
+.progress-bar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  height: 12px;
+  width: 100%;
+  overflow: hidden;
+  margin-bottom: 15px;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #a855f7 0%, #d9af56 100%);
+  border-radius: 8px;
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 12px rgba(217, 175, 86, 0.4);
+}
+
+.progress-milestones {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #7a708a;
+  font-weight: 600;
+}
+
+/* Grid Layout for Cards */
+.contest-grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 1024px) {
+  .contest-hero-card {
+    grid-template-columns: 1fr;
+  }
+  .contest-grid-2col {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Prize Pool Cards */
+.prize-section-title {
+  font-size: 18px;
+  font-weight: 800;
+  margin: 0 0 16px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.prize-cards-container {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 768px) {
+  .prize-cards-container {
+    grid-template-columns: 1fr;
+  }
+}
+
+.prize-card {
+  background: rgba(18, 5, 36, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.prize-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(217, 175, 86, 0.3);
+}
+
+.prize-card.gold-border {
+  border: 1px solid rgba(217, 175, 86, 0.3);
+  background: linear-gradient(180deg, rgba(217, 175, 86, 0.05) 0%, rgba(18, 5, 36, 0.8) 100%);
+}
+
+.prize-badge {
+  font-size: 32px;
+  margin-bottom: 12px;
+  display: block;
+}
+
+.prize-title {
+  font-size: 13px;
+  color: #9c93a8;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+  font-weight: 700;
+}
+
+.prize-reward {
+  font-size: 20px;
+  font-weight: 800;
+  color: #ffffff;
+  margin-bottom: 10px;
+}
+
+.prize-reward.gold-text {
+  color: #d9af56;
+}
+
+.prize-requirement {
+  font-size: 11px;
+  color: #a855f7;
+  font-weight: 700;
+  background: rgba(168, 85, 247, 0.1);
+  padding: 4px 8px;
+  border-radius: 12px;
+  display: inline-block;
+}
+
+/* Leaderboard */
+.leaderboard-panel {
+  background: #120524;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.leaderboard-table-container {
+  overflow-x: auto;
+  max-height: 480px;
+  overflow-y: auto;
+}
+
+.leaderboard-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.leaderboard-table th {
+  padding: 12px;
+  font-size: 11px;
+  color: #9c93a8;
+  text-transform: uppercase;
+  font-weight: 700;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.leaderboard-table td {
+  padding: 14px 12px;
+  font-size: 13.5px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.leaderboard-row-highlight {
+  background: rgba(168, 85, 247, 0.05);
+}
+
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-weight: 800;
+  font-size: 11px;
+}
+
+.rank-badge.gold {
+  background: #d9af56;
+  color: #120524;
+}
+
+.rank-badge.silver {
+  background: #c0c0c0;
+  color: #120524;
+}
+
+.rank-badge.bronze {
+  background: #cd7f32;
+  color: #120524;
+}
+
+.rank-badge.other {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.qualify-tag {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 3px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.qualify-tag.first {
+  background: rgba(217, 175, 86, 0.15);
+  color: #d9af56;
+  border: 1px solid rgba(217, 175, 86, 0.25);
+}
+
+.qualify-tag.second {
+  background: rgba(192, 192, 192, 0.15);
+  color: #e0e0e0;
+}
+
+.qualify-tag.third {
+  background: rgba(205, 127, 50, 0.15);
+  color: #cd7f32;
+}
+
+.qualify-tag.none {
+  background: rgba(255, 255, 255, 0.05);
+  color: #7a708a;
+}
+
+/* Registration overlay card */
+.registration-cta-card {
+  background: linear-gradient(135deg, #18092d 0%, #0e041b 100%);
+  border: 1px solid rgba(217, 175, 86, 0.3);
+  border-radius: 16px;
+  padding: 40px;
+  text-align: center;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  max-width: 600px;
+  margin: 40px auto;
+}
+
+.registration-cta-card h2 {
+  font-size: 28px;
+  font-weight: 800;
+  margin-bottom: 12px;
+  background: linear-gradient(90deg, #d9af56 0%, #ffffff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.registration-cta-card p {
+  color: #9c93a8;
+  font-size: 15px;
+  line-height: 1.6;
+  margin-bottom: 30px;
+}
+
+.btn-register-contest {
+  background: linear-gradient(135deg, #d9af56 0%, #b8913b 100%);
+  color: #120524;
+  border: none;
+  padding: 14px 28px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 0 15px rgba(217, 175, 86, 0.3);
+  transition: all 0.3s ease;
+}
+
+.btn-register-contest:hover {
+  transform: scale(1.03);
+  box-shadow: 0 0 25px rgba(217, 175, 86, 0.5);
+}
+
+/* Trade Log pane inside Contest */
+.contest-trades-panel {
+  background: #120524;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 24px;
+}
+
+.status-text.won {
+  color: #10b981;
+  font-weight: 700;
+}
+
+.status-text.lost {
+  color: #ef4444;
+  font-weight: 700;
+}
+
+.status-text.open {
+  color: #3b82f6;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.status-text.tie {
+  color: #9c93a8;
+  font-weight: 700;
+}

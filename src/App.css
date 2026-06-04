@@ -2712,3 +2712,405 @@
   color: #fbbf24;
   fill: #fbbf24;
 }
+
+/* --- Referral Program Styles --- */
+.referral-view {
+  padding: 0 40px;
+  box-sizing: border-box;
+}
+
+.referral-hero-card {
+  background: linear-gradient(135deg, rgba(217, 175, 86, 0.1) 0%, rgba(44, 22, 84, 0.2) 100%);
+  border: 1px solid rgba(217, 175, 86, 0.25);
+  border-radius: var(--radius-lg);
+  padding: 30px;
+  box-shadow: var(--shadow-gold-glow);
+  display: flex;
+  align-items: center;
+  margin-bottom: 30px;
+  position: relative;
+  overflow: hidden;
+}
+
+.referral-hero-card::after {
+  content: '';
+  position: absolute;
+  top: -150%;
+  right: -50%;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.15) 0%, transparent 70%);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.referral-hero-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.referral-gift-badge {
+  background: linear-gradient(135deg, var(--color-gold) 0%, #a67c1e 100%);
+  color: var(--bg-main);
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 15px rgba(217, 175, 86, 0.4);
+  margin-bottom: 8px;
+}
+
+.referral-hero-content h2 {
+  font-family: var(--font-title);
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.referral-hero-content p {
+  color: var(--text-secondary);
+  font-size: 15px;
+  line-height: 1.6;
+  margin: 0;
+  max-width: 800px;
+}
+
+.milestone-highlight {
+  display: inline-block;
+  margin-top: 8px;
+  color: var(--color-gold-hover);
+  font-weight: 600;
+  border-left: 3px solid var(--color-gold);
+  padding-left: 12px;
+}
+
+.referral-details-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+}
+
+.referral-stats-card, .referral-share-card {
+  background-color: var(--bg-card);
+  border: var(--border-purple);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-purple-glow);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.referral-stats-card h3, .referral-share-card h3 {
+  font-family: var(--font-title);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 16px 0;
+}
+
+.referral-stats-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.referral-stat-box {
+  background-color: var(--bg-card-header);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stat-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.stat-val {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--text-primary);
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.stat-val.gold-text {
+  color: var(--color-gold);
+}
+
+.stat-max {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.stat-sub {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.milestone-progress-container {
+  background-color: rgba(255, 255, 255, 0.02);
+  border-radius: var(--radius-md);
+  padding: 16px;
+}
+
+.progress-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.progress-bar-bg {
+  height: 8px;
+  background-color: var(--bg-card-light);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #b88e36 0%, var(--color-gold) 100%);
+  border-radius: var(--radius-pill);
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.progress-tip {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.share-desc {
+  font-size: 13.5px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0 0 16px 0;
+}
+
+.referral-link-wrapper {
+  display: flex;
+  gap: 10px;
+  background-color: var(--bg-card-header);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-md);
+  padding: 6px 6px 6px 14px;
+  align-items: center;
+  margin-bottom: 20px;
+  transition: var(--transition-fast);
+}
+
+.referral-link-wrapper:focus-within {
+  border-color: rgba(217, 175, 86, 0.4);
+}
+
+.referral-link-input {
+  flex-grow: 1;
+  font-size: 13.5px;
+  color: var(--text-primary);
+  font-family: monospace;
+}
+
+.btn-copy-link {
+  background-color: var(--bg-card-light);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+  border-radius: var(--radius-md);
+  padding: 8px 16px;
+  font-weight: 700;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: var(--transition-fast);
+}
+
+.btn-copy-link:hover {
+  background-color: var(--color-gold);
+  color: var(--bg-main);
+  border-color: var(--color-gold);
+}
+
+.btn-copy-link.copied {
+  background-color: var(--color-success);
+  color: #ffffff;
+  border-color: var(--color-success);
+}
+
+.referral-steps-mini {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ref-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.step-num {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: rgba(168, 85, 247, 0.15);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  color: #a855f7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.step-txt {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.referral-ledger-section {
+  margin-top: 40px;
+}
+
+.ref-count-tag {
+  background-color: rgba(217, 175, 86, 0.1);
+  color: var(--color-gold);
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  font-weight: 700;
+  border: 1px solid rgba(217, 175, 86, 0.2);
+}
+
+.gold-reward-cell {
+  color: var(--color-gold);
+  font-weight: 700;
+}
+
+/* --- Referral Info Modal Styling (Logged Out) --- */
+.referral-info-modal-content {
+  max-width: 520px !important;
+}
+
+.referral-info-modal-body {
+  padding: 24px !important;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.referral-badge-hero {
+  text-align: center;
+  background: radial-gradient(circle at center, rgba(168, 85, 247, 0.15) 0%, transparent 70%);
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(168, 85, 247, 0.15);
+}
+
+.referral-badge-hero h3 {
+  font-family: var(--font-title);
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.referral-badge-hero p {
+  color: var(--text-secondary);
+  font-size: 13.5px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.referral-rewards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.reward-list-item {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  background-color: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-md);
+  padding: 16px;
+}
+
+.reward-item-icon {
+  background: linear-gradient(135deg, var(--color-gold) 0%, #b88e36 100%);
+  color: var(--bg-main);
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 15px;
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(217, 175, 86, 0.2);
+}
+
+.reward-item-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.reward-item-details h4 {
+  font-family: var(--font-title);
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.reward-item-details p {
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.referral-modal-cta {
+  margin-top: 10px;
+}
+
+.referral-cta-btn {
+  background: linear-gradient(135deg, var(--color-gold) 0%, var(--color-gold-dark) 100%);
+  color: var(--bg-main);
+  border: none;
+  font-size: 15px;
+  box-shadow: 0 4px 14px rgba(217, 175, 86, 0.25);
+  transition: var(--transition-smooth);
+  cursor: pointer;
+}
+
+.referral-cta-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(217, 175, 86, 0.4);
+  background: linear-gradient(135deg, var(--color-gold-hover) 0%, var(--color-gold) 100%);
+}

@@ -1,24 +1,19 @@
 import axios from 'axios';
 import { auth } from '../firebase';
+import { getAuthToken } from '../utils/authHelper';
 
-const API_BASE_URL = 'http://localhost:5000/api/payments';
+const API_BASE_URL = `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/api/payments`;
 
 const getAuthHeaders = async () => {
-  let token = 'dummy-token-for-dev';
-  try {
-    if (auth && auth.currentUser) {
-      token = await auth.currentUser.getIdToken();
-    } else {
-      // Fallback for super admin local test
-      const savedClients = localStorage.getItem('vb_clients');
-      if (savedClients) {
-         // just a hacky fallback if Firebase isn't initialized but we have local state
-      }
-    }
-  } catch (e) {
-    console.error("Error getting auth token", e);
+  let localUser = null;
+  const saved = localStorage.getItem('vb_local_user');
+  if (saved) {
+    try {
+      localUser = JSON.parse(saved);
+    } catch (e) {}
   }
   
+  const token = await getAuthToken(localUser);
   return {
     headers: {
       Authorization: `Bearer ${token}`
