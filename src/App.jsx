@@ -64,7 +64,7 @@ const INITIAL_RATES = {
   gold: { price: 6143.57, change: 48.96, pct: 0.80 }
 };
 
-const VITE_BACKEND_URL = '';
+const VITE_BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
 
 const InvesthourLogoText = ({ customStyle, suffix }) => (
   <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', ...customStyle }}>

@@ -15,8 +15,9 @@ import {
 } from 'lucide-react';
 import './ContestAwards.css';
 
-const API_BASE_URL = `/api/contest`;
-const SOCKET_URL = '';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
+const API_BASE_URL = `${BACKEND_URL}/api/contest`;
+const SOCKET_URL = BACKEND_URL;
 
 const ContestAwards = ({ user, rates, walletBalance, onTradeRedirect }) => {
   const [profile, setProfile] = useState(null);
