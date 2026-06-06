@@ -26,6 +26,17 @@ const RazorpayButton = ({ amount, type, onSuccess, onError }) => {
       return;
     }
 
+    if (type === 'deposit') {
+      if (amount < 100) {
+        alert("Minimum deposit amount is ₹100");
+        return;
+      }
+      if (amount > 10000) {
+        alert("Maximum deposit amount is ₹10000");
+        return;
+      }
+    }
+
     setLoading(true);
     try {
       // 1. Create order on our backend

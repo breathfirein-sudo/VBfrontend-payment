@@ -32,7 +32,14 @@ import {
   Gem,
   Star,
   Gift,
-  Copy
+  Copy,
+  Upload,
+  FileText,
+  Trash2,
+  Loader2,
+  AlertTriangle,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import heroGoldOre from './assets/hero_gold_ore.png';
 import './App.css';
@@ -48,13 +55,6 @@ import {
   PORTAL_TRADE_ASSETS,
   pickRandomPortalAsset,
 } from './metals';
-import { auth } from './firebase';
-import { 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
-  onAuthStateChanged, 
-  signOut 
-} from 'firebase/auth';
 
 // Initial rates based on the screenshot
 const INITIAL_RATES = {
@@ -64,14 +64,14 @@ const INITIAL_RATES = {
   gold: { price: 6143.57, change: 48.96, pct: 0.80 }
 };
 
-const VITE_BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+const VITE_BACKEND_URL = '';
 
 const InvesthourLogoText = ({ customStyle, suffix }) => (
   <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', ...customStyle }}>
     <span className="logo-text" style={{ letterSpacing: '1.2px', fontSize: '20px', fontWeight: '800' }}>
       Investhour{suffix}
     </span>
-    <span style={{ fontSize: '20px', display: 'inline-block', WebkitTextFillColor: 'initial', WebkitBackgroundClip: 'initial', background: 'none' }}>
+    <span style={{ fontSize: '20px', display: 'inline-flex', gap: '2px', whiteSpace: 'nowrap', WebkitTextFillColor: 'initial', WebkitBackgroundClip: 'initial', background: 'none' }}>
       📈⌛
     </span>
   </span>
@@ -141,12 +141,211 @@ const IntervalDropdown = ({ value, onChange }) => {
 };
 
 function App() {
+  const getAuthToken = async () => {
+    let token = localStorage.getItem('vb_jwt_token');
+    if (!token && auth && auth.currentUser) {
+      try {
+        token = await auth.currentUser.getIdToken();
+      } catch (err) {
+        console.error("Failed to get Firebase token:", err);
+      }
+    }
+    return token || 'dummy-token-for-dev';
+  };
+
   // --- Auth & Profile States ---
   const [user, setUser] = useState(null);
+  
+  // --- KYC Upload States ---
+  const [kycDocType, setKycDocType] = useState('Aadhaar'); // 'Aadhaar', 'PAN', 'Passport'
+  const [kycFile, setKycFile] = useState(null); // { name: string, size: number, type: string }
+  const [kycUploadProgress, setKycUploadProgress] = useState(0);
+  const [kycUploading, setKycUploading] = useState(false);
+  const [kycUploadStatusText, setKycUploadStatusText] = useState('');
+  const [kycDragging, setKycDragging] = useState(false);
+
+  const handleKycFileSelect = (file) => {
+    if (!file) return;
+    setKycFile(file);
+    setKycUploadProgress(0);
+    setKycUploading(true);
+    setKycUploadStatusText('Uploading file...');
+
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += 10;
+      setKycUploadProgress(progress);
+      if (progress === 30) {
+        setKycUploadStatusText('Verifying checksum...');
+      } else if (progress === 60) {
+        setKycUploadStatusText('Hashing & encrypting...');
+      } else if (progress === 80) {
+        setKycUploadStatusText('Storing securely in IPFS...');
+      } else if (progress >= 100) {
+        clearInterval(interval);
+        setKycUploading(false);
+        setKycUploadStatusText('Completed');
+      }
+    }, 150);
+  };
+
+  const handleKycSubmit = () => {
+    if (!kycFile || kycUploading) return;
+    
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const fileData = e.target.result;
+      const kycDoc = {
+        type: kycDocType,
+        fileName: kycFile.name,
+        fileSize: (kycFile.size / 1024).toFixed(1) + ' KB',
+        uploadedAt: new Date().toISOString().slice(0, 16).replace('T', ' '),
+        fileData: fileData
+      };
+
+      try {
+        const res = await fetch(`${VITE_BACKEND_URL}/api/auth/kyc/upload`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: user.email,
+            kycDocument: kycDoc.fileData,
+            kycDocName: kycDoc.fileName,
+            kycDocType: kycDoc.type,
+            kycUploadedAt: kycDoc.uploadedAt
+          })
+        });
+
+        if (!res.ok) {
+          throw new Error(`Upload failed with status ${res.status}`);
+        }
+
+        setClients(prev => {
+          const next = prev.map(c => {
+            if (c.email.toLowerCase() === user.email.toLowerCase()) {
+              return { ...c, kycStatus: 'Submitted', kycDocument: kycDoc };
+            }
+            return c;
+          });
+          localStorage.setItem('vb_clients', JSON.stringify(next));
+          return next;
+        });
+
+        setKycFile(null);
+        setKycUploadProgress(0);
+      } catch (err) {
+        console.error('Failed to upload KYC:', err);
+        alert('Failed to upload KYC document.');
+      }
+    };
+    reader.readAsDataURL(kycFile);
+  };
+
+  const handleKycRestart = () => {
+    setClients(prev => {
+      const next = prev.map(c => {
+        if (c.email.toLowerCase() === user.email.toLowerCase()) {
+          return {
+            ...c,
+            kycStatus: 'Pending',
+            kycDocument: null,
+            kycRejectionReason: null
+          };
+        }
+        return c;
+      });
+      localStorage.setItem('vb_clients', JSON.stringify(next));
+      return next;
+    });
+  };
+
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState('home'); // 'home', 'auth', 'dashboard'
+  const [view, setView] = useState(() => localStorage.getItem('vb_view') || 'home'); // 'home', 'auth', 'dashboard'
+  useEffect(() => { localStorage.setItem('vb_view', view); }, [view]);
   const [authTab, setAuthTab] = useState('login'); // 'login' or 'register'
-  const [authForm, setAuthForm] = useState({ name: '', email: '', phone: '', password: '' });
+  const [authForm, setAuthForm] = useState({ name: '', email: '', phone: '', password: '', referralCode: '' });
+  const [showPassword, setShowPassword] = useState(false);
+  const [signupStep, setSignupStep] = useState('details'); // 'details' or 'verify'
+  const [signupOtp, setSignupOtp] = useState('');
+
+  // --- Reset Password (via email link) ---
+  const [resetToken] = useState(() => new URLSearchParams(window.location.search).get('token') || '');
+  const [resetNewPassword, setResetNewPassword] = useState('');
+  const [resetConfirmPassword, setResetConfirmPassword] = useState('');
+  const [resetShowPassword, setResetShowPassword] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetDone, setResetDone] = useState(false);
+  const [resetError, setResetError] = useState('');
+
+  const handleResetViaToken = async (e) => {
+    e.preventDefault();
+    setResetError('');
+    if (resetNewPassword.length < 6) return setResetError('Password must be at least 6 characters.');
+    if (resetNewPassword !== resetConfirmPassword) return setResetError('Passwords do not match.');
+    setResetLoading(true);
+    try {
+      const response = await fetch(`${VITE_BACKEND_URL}/api/auth/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: resetToken, newPassword: resetNewPassword })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Reset failed');
+      // Remove token from URL without reload
+      window.history.replaceState({}, '', window.location.pathname);
+      setResetDone(true);
+    } catch (err) {
+      setResetError(err.message);
+    } finally {
+      setResetLoading(false);
+    }
+  };
+  
+  // --- Forgot Password States & Handlers ---
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotStep, setForgotStep] = useState('request'); // 'request' | 'sent'
+  const [forgotLoading, setForgotLoading] = useState(false);
+
+  const handleForgotPasswordRequest = async (e) => {
+    e.preventDefault();
+    if (!forgotEmail) return alert("Please enter your registered email address.");
+    
+    setForgotLoading(true);
+    try {
+      const response = await fetch(`${VITE_BACKEND_URL}/api/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: forgotEmail })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to request password reset');
+      
+      setForgotStep('sent');
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  const [defaultReferralCode, setDefaultReferralCode] = useState(() => {
+    return localStorage.getItem('vb_default_referral_code') || 'INVEST-WELCOME';
+  });
+
+  // --- Auto-detect Referral Link on Load ---
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const refCode = params.get('ref');
+    if (refCode) {
+      setAuthForm(prev => ({ ...prev, referralCode: refCode }));
+      const savedLocalUser = localStorage.getItem('vb_local_user');
+      if (!savedLocalUser) {
+        setView('auth');
+        setAuthTab('register');
+      }
+    }
+  }, []);
+
   
   // --- Real-time OTP Login States ---
   const [otpStep, setOtpStep] = useState('login'); // 'login', 'verify', 'register', 'register-verify'
@@ -172,18 +371,13 @@ function App() {
   }, [otpStep, otpTimer]);
   
   // --- Dashboard Navigation Tab ---
-  const [dashTab, setDashTab] = useState('portfolio'); // 'portfolio', 'trade', 'wallet', 'profile'
+  const [dashTab, setDashTab] = useState(() => localStorage.getItem('vb_dashTab') || 'portfolio'); // 'portfolio', 'trade', 'wallet', 'profile'
+  useEffect(() => { localStorage.setItem('vb_dashTab', dashTab); }, [dashTab]);
   const [disclaimerAccepted, setDisclaimerAccepted] = useState(() => localStorage.getItem('vb_disclaimer_accepted') === 'true');
   const [copiedReferralLink, setCopiedReferralLink] = useState(false);
   const [copiedInspectedReferralLink, setCopiedInspectedReferralLink] = useState(false);
-  const [successfulReferralsCount, setSuccessfulReferralsCount] = useState(1245);
-  const [referralsList, setReferralsList] = useState([
-    { id: 'REF-8492', email: 'sh***@gmail.com', date: '2026-06-03 14:22', status: 'Completed', reward: '₹10 Gold' },
-    { id: 'REF-7201', email: 'an***@yahoo.com', date: '2026-06-02 09:15', status: 'Completed', reward: '₹10 Gold' },
-    { id: 'REF-6034', email: 'ro***@outlook.com', date: '2026-05-30 18:45', status: 'Completed', reward: '₹10 Gold' },
-    { id: 'REF-5982', email: 'ra***@gmail.com', date: '2026-05-28 11:30', status: 'Pending KYC', reward: 'Pending' },
-    { id: 'REF-4819', email: 'mi***@gmail.com', date: '2026-05-25 15:10', status: 'Joined', reward: 'Pending' },
-  ]);
+  const [successfulReferralsCount, setSuccessfulReferralsCount] = useState(0);
+  const [referralsList, setReferralsList] = useState([]);
   
   // --- Live Portfolio Balance & Holdings State ---
   const [walletBalance, setWalletBalance] = useState(0); // Available Cash in Rupees
@@ -215,6 +409,7 @@ function App() {
   const [adminCreditAmount, setAdminCreditAmount] = useState('');
   const [adminDeductAmount, setAdminDeductAmount] = useState('');
   const [adminNotifications, setAdminNotifications] = useState([]);
+  const [showAllFeedTx, setShowAllFeedTx] = useState(false); // Transaction feed "show more"
 
   // --- Contest Awards States & Methods ---
   const [adminTab, setAdminTab] = useState('clients'); // 'clients' or 'contest'
@@ -225,10 +420,7 @@ function App() {
 
   const fetchAdminContestData = async () => {
     try {
-      let token = 'dummy-token-for-dev';
-      if (auth && auth.currentUser) {
-        token = await auth.currentUser.getIdToken();
-      }
+      const token = await getAuthToken();
       const res = await fetch(`${VITE_BACKEND_URL}/api/contest/admin/participants`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -241,12 +433,34 @@ function App() {
     }
   };
 
+  const fetchAdminClientsData = async () => {
+    try {
+      const res = await fetch(`${VITE_BACKEND_URL}/api/admin/users/sync`);
+      const data = await res.json();
+      if (data.success && data.clients) {
+        setClients(prevClients => {
+          const merged = data.clients.map(dbClient => {
+            const existingClient = prevClients.find(c => c.email.toLowerCase() === dbClient.email.toLowerCase());
+            if (existingClient) {
+              return {
+                ...dbClient,
+                referralCount: existingClient.referralCount !== undefined ? existingClient.referralCount : 0
+              };
+            }
+            return dbClient;
+          });
+          localStorage.setItem('vb_clients', JSON.stringify(merged));
+          return merged;
+        });
+      }
+    } catch (e) {
+      console.error('Failed to sync users:', e);
+    }
+  };
+
   const fetchParticipantTrades = async (email) => {
     try {
-      let token = 'dummy-token-for-dev';
-      if (auth && auth.currentUser) {
-        token = await auth.currentUser.getIdToken();
-      }
+      const token = await getAuthToken();
       const res = await fetch(`${VITE_BACKEND_URL}/api/contest/admin/trades/${email}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -261,10 +475,7 @@ function App() {
 
   const handleAdminUpdateContestant = async (email, stats) => {
     try {
-      let token = 'dummy-token-for-dev';
-      if (auth && auth.currentUser) {
-        token = await auth.currentUser.getIdToken();
-      }
+      const token = await getAuthToken();
       const res = await fetch(`${VITE_BACKEND_URL}/api/contest/admin/update-participant`, {
         method: 'POST',
         headers: {
@@ -298,10 +509,7 @@ function App() {
   const handleAdminResetContestant = async (email) => {
     if (!window.confirm(`Are you sure you want to reset contest progress for ${email}? This will delete all their contest trades and set balance back to ₹11,000.`)) return;
     try {
-      let token = 'dummy-token-for-dev';
-      if (auth && auth.currentUser) {
-        token = await auth.currentUser.getIdToken();
-      }
+      const token = await getAuthToken();
       const res = await fetch(`${VITE_BACKEND_URL}/api/contest/admin/reset-participant`, {
         method: 'POST',
         headers: {
@@ -328,10 +536,7 @@ function App() {
 
   const handleAdminGenerateMockContestants = async () => {
     try {
-      let token = 'dummy-token-for-dev';
-      if (auth && auth.currentUser) {
-        token = await auth.currentUser.getIdToken();
-      }
+      const token = await getAuthToken();
       const res = await fetch(`${VITE_BACKEND_URL}/api/contest/admin/generate-mock`, {
         method: 'POST',
         headers: {
@@ -355,6 +560,12 @@ function App() {
       fetchAdminContestData();
     }
   }, [user, adminTab]);
+
+  useEffect(() => {
+    if (user && user.email === 'sandeepkumar.pikili@vrpigroup.co.in') {
+      fetchAdminClientsData();
+    }
+  }, [user]);
 
   // --- Core Application States ---
   const [rates, setRates] = useState(() => createAllMetalRates(INITIAL_RATES));
@@ -472,97 +683,7 @@ function App() {
     }
   }, [user]);
 
-  // --- Real-time Day-to-day Transactions Simulator for Super Admin ---
-  useEffect(() => {
-    if (user && user.email === 'sandeepkumar.pikili@vrpigroup.co.in') {
-      const interval = setInterval(() => {
-        const activeClientsList = clients.filter(c => c.email !== 'sandeepkumar.pikili@vrpigroup.co.in');
-        if (activeClientsList.length === 0) return;
-        
-        const randomClient = activeClientsList[Math.floor(Math.random() * activeClientsList.length)];
-        const actionsList = ['buy', 'sell', 'deposit', 'withdrawal'];
-        const action = actionsList[Math.floor(Math.random() * actionsList.length)];
-        const assetsList = PORTAL_TRADE_ASSETS;
-        const asset = assetsList[Math.floor(Math.random() * assetsList.length)];
-        
-        let txAmount = 0;
-        let txWeight = 0;
-        const pricePerGram = rates[asset].price;
-        
-        const newClientRecord = { ...randomClient };
-        newClientRecord.holdings = { ...randomClient.holdings };
-        newClientRecord.transactions = [ ...randomClient.transactions ];
-        
-        if (action === 'deposit') {
-          txAmount = parseFloat((Math.floor(Math.random() * 8 + 1) * 5000).toFixed(2));
-          newClientRecord.walletBalance = parseFloat((newClientRecord.walletBalance + txAmount).toFixed(2));
-        } else if (action === 'withdrawal') {
-          txAmount = parseFloat((Math.floor(Math.random() * 4 + 1) * 2000).toFixed(2));
-          if (newClientRecord.walletBalance > txAmount) {
-            newClientRecord.walletBalance = parseFloat((newClientRecord.walletBalance - txAmount).toFixed(2));
-          } else {
-            return;
-          }
-        } else if (action === 'buy') {
-          txAmount = parseFloat((Math.floor(Math.random() * 6 + 1) * 1000).toFixed(2));
-          const gst = txAmount * 0.18;
-          const totalCost = txAmount + gst;
-          if (newClientRecord.walletBalance > totalCost) {
-            txWeight = parseFloat((txAmount / pricePerGram).toFixed(4));
-            newClientRecord.walletBalance = parseFloat((newClientRecord.walletBalance - totalCost).toFixed(2));
-            newClientRecord.holdings[asset] = parseFloat((newClientRecord.holdings[asset] + txWeight).toFixed(4));
-            txAmount = totalCost;
-          } else {
-            return;
-          }
-        } else if (action === 'sell') {
-          txWeight = parseFloat((Math.random() * 2 + 0.1).toFixed(4));
-          if (newClientRecord.holdings[asset] > txWeight) {
-            txAmount = parseFloat((txWeight * pricePerGram).toFixed(2));
-            newClientRecord.walletBalance = parseFloat((newClientRecord.walletBalance + txAmount).toFixed(2));
-            newClientRecord.holdings[asset] = parseFloat((newClientRecord.holdings[asset] - txWeight).toFixed(4));
-          } else {
-            return;
-          }
-        }
-        
-        const newTx = {
-          id: `TX-${Math.floor(1000 + Math.random() * 9000)}`,
-          type: action,
-          asset: action === 'deposit' || action === 'withdrawal' ? 'wallet' : asset,
-          amount: txAmount,
-          weight: txWeight,
-          date: new Date().toISOString().slice(0, 16).replace('T', ' '),
-          status: 'Completed'
-        };
-        newClientRecord.transactions.unshift(newTx);
-        
-        setClients(prev => {
-          const next = prev.map(c => c.email.toLowerCase() === randomClient.email.toLowerCase() ? newClientRecord : c);
-          localStorage.setItem('vb_clients', JSON.stringify(next));
-          return next;
-        });
-        
-        const notif = {
-          id: `NOTIF-${Math.random()}`,
-          clientName: randomClient.name,
-          action: action === 'deposit' ? 'deposited funds' : action === 'withdrawal' ? 'withdrew funds' : action === 'buy' ? `purchased ${getAssetLabel(asset)}` : `sold ${getAssetLabel(asset)}`,
-          amount: txAmount,
-          weight: txWeight,
-          asset: asset
-        };
-        
-        setAdminNotifications(prev => [notif, ...prev.slice(0, 3)]);
-        
-        setTimeout(() => {
-          setAdminNotifications(prev => prev.filter(n => n.id !== notif.id));
-        }, 6000);
-        
-      }, 12000);
-      
-      return () => clearInterval(interval);
-    }
-  }, [user, clients, rates]);
+  // Simulator removed to prevent dummy data generation
 
   // --- Real-time Calculations ---
   // Convert Rupees -> Grams
@@ -642,25 +763,49 @@ function App() {
     if (savedLocalUser) {
       try {
         const parsed = JSON.parse(savedLocalUser);
-        setUser(parsed);
-        setView('dashboard');
-        setLoading(false);
+        
+        if (parsed.email === 'sandeepkumar.pikili@vrpigroup.co.in') {
+          setUser(parsed);
+          setView('dashboard');
+          setLoading(false);
+          return;
+        }
+
+        fetch(`${VITE_BACKEND_URL}/api/auth/validate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: parsed.email })
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data.valid) {
+              setUser(parsed);
+              setView('dashboard');
+              if (data.referralCount !== undefined) {
+                setSuccessfulReferralsCount(data.referralCount);
+              }
+            } else {
+              localStorage.removeItem('vb_local_user');
+              setUser(null);
+              setView('home');
+            }
+            setLoading(false);
+          })
+          .catch(e => {
+            console.error("Validation failed, falling back to local:", e);
+            setUser(parsed);
+            setView('dashboard');
+            setLoading(false);
+          });
         return;
       } catch (e) {
         console.error("Error loading local user session:", e);
-      }
-    }
-
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      if (currentUser) {
-        setView('dashboard');
-      } else {
         setView(prev => prev === 'dashboard' ? 'home' : prev);
       }
-      setLoading(false);
-    });
-    return () => unsubscribe();
+    } else {
+      setView(prev => prev === 'dashboard' ? 'home' : prev);
+    }
+    setLoading(false);
   }, []);
 
   // --- Transaction Triggers ---
@@ -830,37 +975,40 @@ function App() {
 
     setOtpSending(true);
 
-    // Super Admin login check
-    if (authForm.email.toLowerCase() === 'sandeepkumar.pikili@vrpigroup.co.in' && authForm.password === 'Psk@300707') {
-      const localUser = { email: 'sandeepkumar.pikili@vrpigroup.co.in', uid: 'admin-super-uid', displayName: 'Super Admin' };
-      localStorage.setItem('vb_local_user', JSON.stringify(localUser));
-      setUser(localUser);
-      setView('dashboard');
-      setOtpSending(false);
-      return;
-    }
-
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, authForm.email, authForm.password);
+      const response = await fetch(`${VITE_BACKEND_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: authForm.email,
+          password: authForm.password
+        })
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Invalid email or password');
+      }
+
       const localUser = { 
-        email: userCredential.user.email, 
-        uid: userCredential.user.uid, 
-        displayName: userCredential.user.email.split('@')[0] 
+        email: data.user.email, 
+        uid: 'db-user-' + data.user.id, 
+        displayName: data.user.name || data.user.email.split('@')[0] 
       };
+      localStorage.setItem('vb_jwt_token', data.token);
       localStorage.setItem('vb_local_user', JSON.stringify(localUser));
       setUser(localUser);
       setView('dashboard');
     } catch (error) {
-      console.warn("Firebase Auth failed, falling back to local session:", error.message);
-      // Fallback: Create a local session for development so the user is never blocked
-      const localUser = { 
-        email: authForm.email, 
-        uid: 'local-session-uid-' + Date.now(), 
-        displayName: authForm.email.split('@')[0] 
-      };
-      localStorage.setItem('vb_local_user', JSON.stringify(localUser));
-      setUser(localUser);
-      setView('dashboard');
+      console.warn("DB Auth login failed, checking fallback:", error.message);
+      // Hardcoded fallback for Super Admin check if backend is not reachable / DB fails (for development safety)
+      if (authForm.email.toLowerCase() === 'sandeepkumar.pikili@vrpigroup.co.in' && authForm.password === 'Psk@300707') {
+        const localUser = { email: 'sandeepkumar.pikili@vrpigroup.co.in', uid: 'admin-super-uid', displayName: 'Super Admin' };
+        localStorage.setItem('vb_local_user', JSON.stringify(localUser));
+        setUser(localUser);
+        setView('dashboard');
+        return;
+      }
+      alert(error.message);
     } finally {
       setOtpSending(false);
     }
@@ -876,41 +1024,140 @@ function App() {
     setOtpSending(true);
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, authForm.email, authForm.password);
+      const response = await fetch(`${VITE_BACKEND_URL}/api/auth/send-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: authForm.email })
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to send OTP');
+      }
+      setSignupStep('verify');
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setOtpSending(false);
+    }
+  };
+
+  const handleVerifySignupOtp = async (e) => {
+    e.preventDefault();
+    if (!signupOtp) return alert("Please enter the OTP.");
+    
+    setOtpSending(true);
+    try {
+      // 1. Verify OTP
+      const otpRes = await fetch(`${VITE_BACKEND_URL}/api/auth/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: authForm.email, otp: signupOtp })
+      });
+      const otpData = await otpRes.json();
+      if (!otpRes.ok || !otpData.success) {
+        throw new Error(otpData.error || 'Invalid OTP');
+      }
+
+      // 2. Register
+      const response = await fetch(`${VITE_BACKEND_URL}/api/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: authForm.email,
+          password: authForm.password,
+          name: authForm.name,
+          referralCode: authForm.referralCode,
+          defaultReferralCode: defaultReferralCode
+        })
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to create account');
+      }
+
       const localUser = { 
-        email: userCredential.user.email, 
-        uid: userCredential.user.uid, 
-        displayName: authForm.name || userCredential.user.email.split('@')[0] 
+        email: data.user.email, 
+        uid: 'db-user-' + data.user.id, 
+        displayName: data.user.name || data.user.email.split('@')[0] 
       };
-      localStorage.setItem('vb_local_user', JSON.stringify(localUser));
-      setUser(localUser);
-      alert(`Vault Created Securely! Welcome: ${userCredential.user.email}`);
-      setView('dashboard');
-      setAuthForm({ name: '', email: '', phone: '', password: '' });
+      
+      // Initialize registering client profile and credit referrer in local storage
+      const cRecord = {
+        id: `CUST-${Math.floor(1000 + Math.random() * 9000)}`,
+        name: data.user.name || data.user.email.split('@')[0],
+        email: data.user.email,
+        phone: '',
+        walletBalance: 0,
+        holdings: createInitialHoldings({}),
+        kycStatus: 'Pending',
+        transactions: [],
+        referralCount: 0,
+        referredBy: authForm.referralCode || ''
+      };
+
+      setClients(prev => {
+        let next = [...prev];
+        if (!next.some(c => c.email.toLowerCase() === data.user.email.toLowerCase())) {
+          next.push(cRecord);
+        }
+
+        if (authForm.referralCode) {
+          const codeWithoutPrefix = authForm.referralCode.toUpperCase().replace('IH-', '');
+          next = next.map(c => {
+            const isAdminCode = authForm.referralCode.toUpperCase() === defaultReferralCode.toUpperCase();
+            const isMatch = isAdminCode
+              ? c.email.toLowerCase() === 'sandeepkumar.pikili@vrpigroup.co.in'
+              : c.email.split('@')[0].toUpperCase() === codeWithoutPrefix;
+
+            if (isMatch) {
+              const newCount = (c.referralCount || 0) + 1;
+              const newBalance = (c.walletBalance || 0) + 10;
+              const newTx = {
+                id: `TX-${Math.floor(1000 + Math.random() * 9000)}`,
+                type: 'deposit',
+                asset: 'wallet',
+                amount: 10,
+                weight: 0,
+                date: new Date().toISOString().slice(0, 16).replace('T', ' '),
+                status: 'Completed',
+                details: `Referral bonus for inviting ${data.user.email}`
+              };
+              
+              // If referrer is the logged in user, update current frontend state in real-time
+              if (user && c.email.toLowerCase() === user.email.toLowerCase()) {
+                setSuccessfulReferralsCount(newCount);
+                setWalletBalance(newBalance);
+                setTransactions(prevTx => [newTx, ...prevTx]);
+              }
+
+              return {
+                ...c,
+                referralCount: newCount,
+                walletBalance: newBalance,
+                transactions: [newTx, ...(c.transactions || [])]
+              };
+            }
+            return c;
+          });
+        }
+        localStorage.setItem('vb_clients', JSON.stringify(next));
+        return next;
+      });
+
+      alert(`Vault Created Securely! Welcome: ${data.user.email}\nPlease log in with your new account.`);
+      setAuthTab('login');
+      setAuthForm({ name: '', email: '', phone: '', password: '', referralCode: '' });
     } catch (error) {
-      console.warn("Firebase account creation failed, using local registration fallback:", error.message);
-      const localUser = { 
-        email: authForm.email, 
-        uid: 'local-session-uid-' + Date.now(), 
-        displayName: authForm.name || authForm.email.split('@')[0] 
-      };
-      localStorage.setItem('vb_local_user', JSON.stringify(localUser));
-      setUser(localUser);
-      alert(`Vault Created Securely! Welcome: ${localUser.email}`);
-      setView('dashboard');
-      setAuthForm({ name: '', email: '', phone: '', password: '' });
+      console.error("DB Register failed:", error.message);
+      alert(error.message);
     } finally {
       setOtpSending(false);
     }
   };
 
   const handleSignOut = async () => {
-    try {
-      await signOut(auth);
-    } catch (error) {
-      console.error("Firebase signout error:", error);
-    }
     localStorage.removeItem('vb_local_user');
+    localStorage.removeItem('vb_jwt_token');
     setUser(null);
     setView('home');
   };
@@ -977,8 +1224,10 @@ function App() {
   const isAdmin = user && user.email === 'sandeepkumar.pikili@vrpigroup.co.in';
 
   if (view === 'dashboard' && isAdmin) {
+    const realClients = clients.filter(c => c.email.toLowerCase() !== 'sandeepkumar.pikili@vrpigroup.co.in');
+
     // Collect all transactions from clients database for system-wide display
-    const allSystemTransactions = clients.reduce((acc, client) => {
+    const allSystemTransactions = realClients.reduce((acc, client) => {
       const clientTx = client.transactions.map(tx => ({
         ...tx,
         clientName: client.name,
@@ -988,7 +1237,7 @@ function App() {
     }, []).sort((a, b) => new Date(b.date) - new Date(a.date));
 
     // Select the currently inspected client
-    const inspectedClient = clients.find(c => c.id === selectedClientId) || clients[0] || {
+    const inspectedClient = clients.find(c => c.id === selectedClientId) || realClients[0] || {
       id: 'CUST-NONE',
       name: 'No Customers Active',
       email: '',
@@ -1000,7 +1249,7 @@ function App() {
     };
 
     // Calculate system-wide total precious metal holdings
-    const systemReserves = clients.reduce((res, client) => {
+    const systemReserves = realClients.reduce((res, client) => {
       res.gold += client.holdings.gold || 0;
       res.silver += client.holdings.silver || 0;
       res.platinum += client.holdings.platinum || 0;
@@ -1034,7 +1283,7 @@ function App() {
           <div className="container nav-container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 20px' }}>
             <div className="logo-section" onClick={() => setView('home')} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
               <div>
-                <InvesthourLogoText customStyle={{ fontSize: '20px', fontWeight: '800', color: '#ffffff', display: 'block' }} suffix=" Exchange" />
+                <InvesthourLogoText customStyle={{ fontSize: '20px', fontWeight: '800', color: '#ffffff', display: 'block' }} />
                 <span style={{ fontSize: '10px', color: '#f43f5e', letterSpacing: '2px', textTransform: 'uppercase', fontWeight: 700 }}>Super Admin Console</span>
               </div>
             </div>
@@ -1088,7 +1337,7 @@ function App() {
               </div>
               <div>
                 <span style={{ color: '#9c93a8', fontSize: '12px', display: 'block', textTransform: 'uppercase', letterSpacing: '1px' }}>Total Registered Clients</span>
-                <span style={{ fontSize: '26px', fontWeight: '800', color: '#ffffff' }}>{clients.length} <span style={{ fontSize: '14px', color: '#10b981', fontWeight: 'normal' }}>Active</span></span>
+                <span style={{ fontSize: '26px', fontWeight: '800', color: '#ffffff' }}>{realClients.length} <span style={{ fontSize: '14px', color: '#10b981', fontWeight: 'normal' }}>Active</span></span>
               </div>
             </div>
 
@@ -1226,7 +1475,7 @@ function App() {
                     <X size={14} /> Clear All Data
                   </button>
                   <div style={{ background: '#1e0b36', padding: '4px 12px', borderRadius: '8px', fontSize: '12px', color: '#d9af56', fontWeight: 600 }}>
-                    {clients.length} Clients
+                    {clients.filter(c => c.email.toLowerCase() !== 'sandeepkumar.pikili@vrpigroup.co.in').length} Clients
                   </div>
                 </div>
               </div>
@@ -1243,7 +1492,7 @@ function App() {
                     </tr>
                   </thead>
                   <tbody>
-                    {clients.map(c => {
+                    {clients.filter(c => c.email.toLowerCase() !== 'sandeepkumar.pikili@vrpigroup.co.in').map(c => {
                       const isSelected = selectedClientId === c.id;
                       const matchedVal = (c.holdings?.gold || 0) * rates.gold.price + (c.holdings?.silver || 0) * rates.silver.price + (c.holdings?.platinum || 0) * rates.platinum.price + (c.holdings?.iron || 0) * rates.iron.price + (c.walletBalance || 0);
                       return (
@@ -1307,9 +1556,9 @@ function App() {
                               <button 
                                 onClick={async (e) => {
                                   e.stopPropagation();
-                                  if (window.confirm(`Are you sure you want to delete ${c.name}'s account? This will permanently delete:\n- Client profile data\n- Firebase authentication account\n- All transaction history\n\nThis action cannot be undone.`)) {
+                                  if (window.confirm(`Are you sure you want to delete ${c.name}'s account? This will permanently delete:\n- Client profile data\n- Authentication account\n- All transaction history\n\nThis action cannot be undone.`)) {
                                     try {
-                                      // Call backend to delete Firebase user
+                                      // Call backend to delete user
                                       const response = await fetch(`${VITE_BACKEND_URL}/api/admin/delete-user`, {
                                         method: "POST",
                                         headers: {
@@ -1324,8 +1573,7 @@ function App() {
                                       const data = await response.json();
                                       
                                       if (!response.ok) {
-                                        console.warn("Firebase deletion warning:", data.message);
-                                        // Continue with local deletion even if Firebase deletion fails
+                                        console.warn("Backend deletion warning:", data.message);
                                       }
                                       
                                       // Remove from local state and localStorage
@@ -1350,7 +1598,7 @@ function App() {
                                         setSelectedClientId(updatedClients.length > 0 ? updatedClients[0].id : '');
                                       }
                                       
-                                      alert(`${c.name}'s local data has been deleted. Note: Firebase account deletion may have failed. Error: ${error.message}`);
+                                      alert(`${c.name}'s local data has been deleted. Note: Backend account deletion may have failed. Error: ${error.message}`);
                                     }
                                   }
                                 }}
@@ -1380,36 +1628,56 @@ function App() {
                 </table>
               </div>
 
-              {/* Master System-Wide Ledger monitor */}
-              <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '20px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              {/* Client Balances & Holdings Summary */}
+              <div style={{ display: 'none' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <h3 style={{ fontSize: '15px', fontWeight: '800', margin: 0 }}>System-Wide Transaction Feed</h3>
-                  <span style={{ fontSize: '11px', color: '#9c93a8' }}>Sorted by recency</span>
+                  <h3 style={{ fontSize: '15px', fontWeight: '800', margin: 0 }}>
+                    Client Balances &amp; Holdings
+                    <span style={{ fontSize: '11px', fontWeight: 400, color: '#9c93a8', marginLeft: '8px' }}>({clients.length} clients)</span>
+                  </h3>
                 </div>
-                <div style={{ maxHeight: '250px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', paddingRight: '5px' }}>
-                  {allSystemTransactions.map((tx, idx) => (
-                    <div key={`${tx.id}-${idx}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)', padding: '10px 14px', borderRadius: '8px', borderLeft: `3px solid ${tx.type === 'buy' ? '#a855f7' : tx.type === 'sell' ? '#d9af56' : tx.type === 'deposit' ? '#10b981' : '#f43f5e'}` }}>
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontWeight: 700, fontSize: '13px' }}>{tx.clientName}</span>
-                          <span style={{ fontSize: '11px', color: '#9c93a8' }}>{tx.clientEmail}</span>
+                <div style={{ maxHeight: '320px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px', paddingRight: '4px' }}>
+                  {/* Header row */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 90px 70px 70px 70px 70px', gap: '8px', padding: '6px 10px', fontSize: '10px', fontWeight: 700, color: '#9c93a8', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                    <span>Client</span>
+                    <span style={{ textAlign: 'right' }}>Wallet</span>
+                    <span style={{ textAlign: 'right' }}>Gold</span>
+                    <span style={{ textAlign: 'right' }}>Silver</span>
+                    <span style={{ textAlign: 'right' }}>Platinum</span>
+                    <span style={{ textAlign: 'right' }}>Iron</span>
+                  </div>
+                  {clients.map((c) => {
+                    const holdings = c.holdings || {};
+                    return (
+                      <div
+                        key={c.id}
+                        style={{ display: 'grid', gridTemplateColumns: '1fr 90px 70px 70px 70px 70px', gap: '8px', padding: '8px 10px', borderRadius: '8px', background: selectedClientId === c.id ? 'rgba(217,175,86,0.08)' : 'rgba(255,255,255,0.02)', cursor: 'pointer', transition: 'background 0.15s' }}
+                        onClick={() => setSelectedClientId(c.id)}
+                        onMouseEnter={e => { if (selectedClientId !== c.id) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+                        onMouseLeave={e => { if (selectedClientId !== c.id) e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '12px', color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</div>
+                          <div style={{ fontSize: '10px', color: '#9c93a8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.email}</div>
                         </div>
-                        <div style={{ fontSize: '11px', color: '#9c93a8', marginTop: '2px' }}>
-                          {tx.type === 'buy' ? 'Purchased' : tx.type === 'sell' ? 'Sold' : tx.type === 'deposit' ? 'Deposited' : 'Withdrew'} {tx.asset !== 'wallet' ? getAssetLabel(tx.asset) : 'Wallet Credits'} • {tx.date}
-                        </div>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <span style={{ fontWeight: 800, color: '#ffffff', fontSize: '13px' }}>
-                          ₹{tx.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        <span style={{ textAlign: 'right', fontWeight: 700, fontSize: '12px', color: '#10b981' }}>
+                          ₹{(c.walletBalance || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                         </span>
-                        {tx.weight > 0 && (
-                          <div style={{ fontSize: '10px', color: '#d9af56' }}>
-                            {tx.weight.toFixed(4)} g
-                          </div>
-                        )}
+                        <span style={{ textAlign: 'right', fontSize: '12px', color: '#d9af56' }}>
+                          {(holdings.gold || 0) > 0 ? `${(holdings.gold).toFixed(3)}g` : <span style={{ color: '#3d3650' }}>—</span>}
+                        </span>
+                        <span style={{ textAlign: 'right', fontSize: '12px', color: '#94a3b8' }}>
+                          {(holdings.silver || 0) > 0 ? `${(holdings.silver).toFixed(3)}g` : <span style={{ color: '#3d3650' }}>—</span>}
+                        </span>
+                        <span style={{ textAlign: 'right', fontSize: '12px', color: '#c084fc' }}>
+                          {(holdings.platinum || 0) > 0 ? `${(holdings.platinum).toFixed(3)}g` : <span style={{ color: '#3d3650' }}>—</span>}
+                        </span>
+                        <span style={{ textAlign: 'right', fontSize: '12px', color: '#fb923c' }}>
+                          {(holdings.iron || 0) > 0 ? `${(holdings.iron).toFixed(3)}g` : <span style={{ color: '#3d3650' }}>—</span>}
+                        </span>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
@@ -1417,9 +1685,14 @@ function App() {
 
             {/* Right Side: Visual Inspector Pane (5 Cols) */}
             <div style={{ gridColumn: 'span 5', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              
-              {/* Customer Inspection Dashboard Card */}
-              <div style={{ background: '#120524', border: '1px solid rgba(217, 175, 86, 0.2)', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
+              {!selectedClientId ? (
+                <div style={{ background: '#120524', border: '1px dashed rgba(255, 255, 255, 0.1)', borderRadius: '16px', padding: '40px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', minHeight: '400px' }}>
+                  <p style={{ color: '#9c93a8', textAlign: 'center', fontSize: '14px', lineHeight: '1.6' }}>Select <strong>"Inspect"</strong> on any client from the list<br/>to view their vault details.</p>
+                </div>
+              ) : (
+                <>
+                  {/* Customer Inspection Dashboard Card */}
+                  <div style={{ background: '#120524', border: '1px solid rgba(217, 175, 86, 0.2)', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
                 <div style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '16px' }}>
                   <span style={{ fontSize: '10px', color: '#d9af56', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px' }}>Vault Client Inspector</span>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
@@ -1430,29 +1703,175 @@ function App() {
                 </div>
 
                 {/* KYC Interactive Toggle Panel */}
-                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '12px 16px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <span style={{ fontSize: '11px', color: '#9c93a8', display: 'block' }}>KYC Status Verification</span>
-                    <strong style={{ color: inspectedClient.kycStatus === 'Verified' ? '#10b981' : '#f59e0b', fontSize: '13px' }}>{inspectedClient.kycStatus}</strong>
+                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <span style={{ fontSize: '11px', color: '#9c93a8', display: 'block' }}>KYC Status Verification</span>
+                      <strong style={{ 
+                        color: inspectedClient.kycStatus === 'Verified' ? '#10b981' : inspectedClient.kycStatus === 'Submitted' ? '#f59e0b' : inspectedClient.kycStatus === 'Rejected' ? '#ef4444' : '#9c93a8', 
+                        fontSize: '13px',
+                        textTransform: 'uppercase'
+                      }}>
+                        {inspectedClient.kycStatus || 'Pending'}
+                      </strong>
+                    </div>
+                    
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      {inspectedClient.kycStatus === 'Verified' ? (
+                        <button 
+                          onClick={() => {
+                            const updated = clients.map(c => {
+                              if (c.id === inspectedClient.id) {
+                                return { ...c, kycStatus: 'Pending', kycDocument: null, kycRejectionReason: null };
+                              }
+                              return c;
+                            });
+                            setClients(updated);
+                            localStorage.setItem('vb_clients', JSON.stringify(updated));
+                          }}
+                          style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                        >
+                          Revoke Verification
+                        </button>
+                      ) : inspectedClient.kycStatus === 'Submitted' ? (
+                        <>
+                          <button 
+                            onClick={async () => {
+                              try {
+                                const res = await fetch(`${VITE_BACKEND_URL}/api/admin/kyc/update`, {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ userId: inspectedClient.id.replace('CUST-', ''), status: 'Verified' })
+                                });
+                                if (!res.ok) throw new Error('Update failed');
+                                const updated = clients.map(c => {
+                                  if (c.id === inspectedClient.id) {
+                                    return { ...c, kycStatus: 'Verified', kycRejectionReason: null };
+                                  }
+                                  return c;
+                                });
+                                setClients(updated);
+                                localStorage.setItem('vb_clients', JSON.stringify(updated));
+                              } catch (e) {
+                                alert('Failed to update KYC status.');
+                              }
+                            }}
+                            style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.2)', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                          >
+                            Approve
+                          </button>
+                          <button 
+                            onClick={async () => {
+                              const reason = prompt("Enter KYC rejection reason:", "The uploaded document image was blurry. Please ensure all details are clearly readable.");
+                              if (reason === null) return; // cancelled
+                              try {
+                                const res = await fetch(`${VITE_BACKEND_URL}/api/admin/kyc/update`, {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ userId: inspectedClient.id.replace('CUST-', ''), status: 'Rejected' })
+                                });
+                                if (!res.ok) throw new Error('Update failed');
+                                const updated = clients.map(c => {
+                                  if (c.id === inspectedClient.id) {
+                                    return { ...c, kycStatus: 'Rejected', kycRejectionReason: reason || 'Uploaded document details could not be verified.' };
+                                  }
+                                  return c;
+                                });
+                                setClients(updated);
+                                localStorage.setItem('vb_clients', JSON.stringify(updated));
+                              } catch (e) {
+                                alert('Failed to update KYC status.');
+                              }
+                            }}
+                            style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                          >
+                            Reject
+                          </button>
+                        </>
+                      ) : inspectedClient.kycStatus === 'Rejected' ? (
+                        <button 
+                          onClick={() => {
+                            const updated = clients.map(c => {
+                              if (c.id === inspectedClient.id) {
+                                return { ...c, kycStatus: 'Pending', kycDocument: null, kycRejectionReason: null };
+                              }
+                              return c;
+                            });
+                            setClients(updated);
+                            localStorage.setItem('vb_clients', JSON.stringify(updated));
+                          }}
+                          style={{ background: 'rgba(255, 255, 255, 0.05)', color: '#ffffff', border: '1px solid rgba(255, 255, 255, 0.1)', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                        >
+                          Reset to Pending
+                        </button>
+                      ) : (
+                        /* Pending */
+                        <button 
+                          onClick={async () => {
+                            try {
+                              const res = await fetch(`${VITE_BACKEND_URL}/api/admin/kyc/update`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ userId: inspectedClient.id.replace('CUST-', ''), status: 'Verified' })
+                              });
+                              if (!res.ok) throw new Error('Update failed');
+                              const updated = clients.map(c => {
+                                if (c.id === inspectedClient.id) {
+                                  return { ...c, kycStatus: 'Verified', kycRejectionReason: null };
+                                }
+                                return c;
+                              });
+                              setClients(updated);
+                              localStorage.setItem('vb_clients', JSON.stringify(updated));
+                            } catch (e) {
+                              alert('Failed to update KYC status.');
+                            }
+                          }}
+                          style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.2)', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                        >
+                          Force Verify
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <button 
-                    onClick={() => {
-                      const updated = clients.map(c => {
-                        if (c.id === inspectedClient.id) {
-                          return {
-                            ...c,
-                            kycStatus: c.kycStatus === 'Verified' ? 'Pending' : 'Verified'
-                          };
-                        }
-                        return c;
-                      });
-                      setClients(updated);
-                      localStorage.setItem('vb_clients', JSON.stringify(updated));
-                    }}
-                    style={{ background: inspectedClient.kycStatus === 'Verified' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(16, 185, 129, 0.1)', color: inspectedClient.kycStatus === 'Verified' ? '#f59e0b' : '#10b981', border: '1px solid', borderColor: inspectedClient.kycStatus === 'Verified' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(16, 185, 129, 0.2)', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
-                  >
-                    {inspectedClient.kycStatus === 'Verified' ? 'Revoke Approval' : 'Approve KYC'}
-                  </button>
+
+                  {inspectedClient.kycDocument && (
+                    <div style={{ marginTop: '8px', borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '10px' }}>
+                      <span style={{ fontSize: '11px', color: '#9c93a8', display: 'block', marginBottom: '6px' }}>Uploaded Verification File:</span>
+                      <div className="kyc-file-preview" style={{ marginTop: 0, padding: '10px 12px', background: 'rgba(0,0,0,0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div className="kyc-file-details">
+                          <FileText size={16} className="kyc-upload-icon" style={{ margin: 0 }} />
+                          <div className="kyc-file-info" style={{ textAlign: 'left' }}>
+                            <span className="kyc-file-name" style={{ fontSize: '12px', color: '#ffffff' }}>{inspectedClient.kycDocument.fileName}</span>
+                            <span className="kyc-file-size" style={{ fontSize: '10px', color: '#9c93a8' }}>{inspectedClient.kycDocument.type} • {inspectedClient.kycDocument.fileSize} • {inspectedClient.kycDocument.uploadedAt}</span>
+                          </div>
+                        </div>
+                        <button 
+                          onClick={() => {
+                            if (inspectedClient.kycDocument.fileData) {
+                              const newWindow = window.open();
+                              if (newWindow) {
+                                newWindow.document.write(`<iframe src="${inspectedClient.kycDocument.fileData}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
+                              }
+                            } else {
+                              alert('File data not available for this older upload. Please ask the user to re-upload.');
+                            }
+                          }}
+                          style={{ background: 'rgba(217, 175, 86, 0.1)', border: '1px solid rgba(217, 175, 86, 0.3)', color: '#d9af56', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}
+                          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(217, 175, 86, 0.2)'; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(217, 175, 86, 0.1)'; }}
+                        >
+                          View
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {inspectedClient.kycStatus === 'Rejected' && inspectedClient.kycRejectionReason && (
+                    <div className="kyc-rejection-reason" style={{ marginTop: '4px', padding: '10px' }}>
+                      <strong>Rejection Reason:</strong> {inspectedClient.kycRejectionReason}
+                    </div>
+                  )}
                 </div>
 
                 {/* Inspected Customer Wallet & Assets Grid */}
@@ -1713,7 +2132,8 @@ function App() {
                   )}
                 </div>
               </div>
-
+                </>
+              )}
             </div>
 
           </div>
@@ -1957,6 +2377,72 @@ function App() {
                 </div>
               </div>
 
+              {/* Settings & Analytics Section */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '24px', marginBottom: '10px' }}>
+                
+                {/* Configuration Panel */}
+                <div style={{ background: '#120524', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>⚙️ Referral Configuration</h3>
+                  <p style={{ margin: 0, fontSize: '12px', color: '#9c93a8' }}>Define the system-wide default invitation code. Users signing up with this code are tracked as public default invitees.</p>
+                  
+                  <div style={{ marginTop: '10px' }}>
+                    <label style={{ fontSize: '11px', color: '#d9af56', textTransform: 'uppercase', fontWeight: 700, display: 'block', marginBottom: '6px' }}>Default Referral Code</label>
+                    <input 
+                      type="text" 
+                      readOnly 
+                      value={defaultReferralCode} 
+                      style={{ width: '100%', background: '#1e0b36', border: '1px solid rgba(217, 175, 86, 0.2)', padding: '10px 14px', borderRadius: '8px', color: '#9c93a8', fontSize: '14px', fontWeight: '700', cursor: 'not-allowed' }}
+                    />
+                  </div>
+
+                  <div style={{ marginTop: '10px', background: '#1a0832', padding: '12px', borderRadius: '8px', borderLeft: '3px solid #d9af56' }}>
+                    <span style={{ fontSize: '11px', color: '#9c93a8', display: 'block', marginBottom: '4px' }}>System Default Referral Link</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+                      <span style={{ fontSize: '13px', color: '#ffffff', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {`${window.location.origin}?ref=${defaultReferralCode}`}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(`${window.location.origin}?ref=${defaultReferralCode}`);
+                          alert("System default referral link copied to clipboard!");
+                        }}
+                        style={{ background: 'transparent', border: 'none', color: '#d9af56', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: 0 }}
+                      >
+                        <Copy size={16} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Analytics Panel */}
+                <div style={{ background: '#120524', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#ffffff' }}>📊 Referral Network Analytics</h3>
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginTop: '5px' }}>
+                    <div style={{ background: '#1a0832', padding: '12px', borderRadius: '10px', textAlign: 'center' }}>
+                      <span style={{ fontSize: '10px', color: '#9c93a8', display: 'block', textTransform: 'uppercase' }}>Default Code</span>
+                      <strong style={{ fontSize: '18px', color: '#d9af56', display: 'block', marginTop: '4px' }}>
+                        {clients.filter(c => c.referredBy === defaultReferralCode).length}
+                      </strong>
+                    </div>
+                    <div style={{ background: '#1a0832', padding: '12px', borderRadius: '10px', textAlign: 'center' }}>
+                      <span style={{ fontSize: '10px', color: '#9c93a8', display: 'block', textTransform: 'uppercase' }}>Peer-to-Peer</span>
+                      <strong style={{ fontSize: '18px', color: '#ec4899', display: 'block', marginTop: '4px' }}>
+                        {clients.filter(c => c.referredBy && c.referredBy !== defaultReferralCode).length}
+                      </strong>
+                    </div>
+                    <div style={{ background: '#1a0832', padding: '12px', borderRadius: '10px', textAlign: 'center' }}>
+                      <span style={{ fontSize: '10px', color: '#9c93a8', display: 'block', textTransform: 'uppercase' }}>Organic (None)</span>
+                      <strong style={{ fontSize: '18px', color: '#10b981', display: 'block', marginTop: '4px' }}>
+                        {clients.filter(c => !c.referredBy).length}
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
               {/* Roster of clients and their referral stats */}
               <div style={{ background: '#120524', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '16px', padding: '24px' }}>
                 <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: 800, color: '#ffffff' }}>Referral Ledger Directory</h3>
@@ -2090,9 +2576,69 @@ function App() {
     });
 
   if (view === 'dashboard') {
+    if (successfulReferralsCount < 1) {
+      return (
+        <div id="root" className="dashboard-page-view admin-dashboard animate-fade-in" style={{ background: '#0e041b', color: '#ffffff', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+          <header className="header" style={{ borderBottom: '1px solid rgba(217, 175, 86, 0.15)', background: '#120524' }}>
+            <div className="container nav-container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 20px' }}>
+              <div className="logo-section" onClick={() => setView('home')} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+                <InvesthourLogoText customStyle={{ fontSize: '20px', fontWeight: '800', color: '#ffffff', display: 'block' }} />
+              </div>
+              <button className="btn-sec-signout" onClick={handleSignOut} style={{ background: 'transparent', color: '#d9af56', border: '1px solid #d9af56', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}>Sign Out</button>
+            </div>
+          </header>
+
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+            <div style={{ background: '#120524', border: '1px solid rgba(217, 175, 86, 0.2)', padding: '40px', borderRadius: '16px', maxWidth: '500px', width: '100%', textAlign: 'center', boxShadow: '0 10px 40px rgba(0,0,0,0.5)' }}>
+              <div style={{ width: '64px', height: '64px', background: 'rgba(217, 175, 86, 0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', color: '#d9af56' }}>
+                <Lock size={32} />
+              </div>
+              <h2 style={{ fontSize: '24px', fontWeight: '800', margin: '0 0 10px 0' }}>Vault Locked</h2>
+              <p style={{ color: '#9c93a8', fontSize: '14px', lineHeight: '1.6', marginBottom: '30px' }}>
+                Welcome to Investhour! To unlock your full dashboard, live trading floor, and physical vault access, you must successfully refer at least <strong>1 friend</strong> to sign up using your unique link below.
+              </p>
+
+              <div style={{ background: 'rgba(0,0,0,0.3)', padding: '15px', borderRadius: '8px', marginBottom: '20px', border: '1px dashed rgba(217, 175, 86, 0.3)' }}>
+                <span style={{ display: 'block', fontSize: '11px', color: '#9c93a8', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '1px' }}>Your Unique Referral Link</span>
+                <input 
+                  type="text" 
+                  readOnly 
+                  value={`${window.location.origin}?ref=IH-${user?.email?.split('@')[0].toUpperCase() || 'USER'}`} 
+                  style={{ width: '100%', background: 'transparent', border: 'none', color: '#d9af56', fontSize: '13px', textAlign: 'center', outline: 'none', marginBottom: '10px' }}
+                />
+                <button 
+                  onClick={() => {
+                    navigator.clipboard.writeText(`${window.location.origin}?ref=IH-${user?.email?.split('@')[0].toUpperCase() || 'USER'}`);
+                    setCopiedReferralLink(true);
+                    setTimeout(() => setCopiedReferralLink(false), 2000);
+                  }}
+                  style={{ background: copiedReferralLink ? '#10b981' : '#d9af56', color: '#000', border: 'none', padding: '8px 16px', borderRadius: '6px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s', width: '100%' }}
+                >
+                  {copiedReferralLink ? 'Copied!' : 'Copy Link'}
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', fontSize: '13px', color: '#ffffff' }}>
+                <span style={{ color: '#9c93a8' }}>Referrals Completed:</span>
+                <strong style={{ color: '#f43f5e', fontSize: '16px' }}>{successfulReferralsCount} / 1</strong>
+              </div>
+              
+              <button 
+                onClick={() => window.location.reload()}
+                style={{ marginTop: '30px', background: 'transparent', color: '#9c93a8', border: 'none', textDecoration: 'underline', fontSize: '12px', cursor: 'pointer' }}
+              >
+                I've referred someone, refresh status
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
     const goldVal = (holdings?.gold || 0) * rates.gold.price;
     const silverVal = (holdings?.silver || 0) * rates.silver.price;
-    const totalValuation = goldVal + silverVal + walletBalance;
+    const referralEarnings = successfulReferralsCount * 10;
+    const addedCash = Math.max(0, walletBalance - referralEarnings);
+    const totalValuation = goldVal + silverVal + addedCash;
 
     return (
       <div id="root" className="dashboard-page-view animate-fade-in">
@@ -2210,7 +2756,7 @@ function App() {
                     <span>All-Time Vault Growth</span>
                   </div>
                   <div className="cash-indicator">
-                    <Wallet size={12} /> Available Cash: ₹{walletBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    <Wallet size={12} /> Available Cash: ₹{addedCash.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </div>
                 </div>
 
@@ -2221,19 +2767,19 @@ function App() {
                     <div className="alloc-bar-container">
                       <div className="alloc-segment gold" style={{ width: `${(goldVal / totalValuation) * 100}%` }} title="Gold"></div>
                       <div className="alloc-segment silver" style={{ width: `${(silverVal / totalValuation) * 100}%` }} title="Silver"></div>
-                      <div className="alloc-segment cash" style={{ width: `${(walletBalance / totalValuation) * 100}%` }} title="Cash"></div>
+                      <div className="alloc-segment cash" style={{ width: `${(addedCash / totalValuation) * 100}%` }} title="Cash"></div>
                     </div>
                     <div className="alloc-legend-grid">
                       <div className="legend-item"><span className="dot gold"></span> Gold: {((goldVal / totalValuation) * 100).toFixed(1)}%</div>
                       <div className="legend-item"><span className="dot silver"></span> Silver: {((silverVal / totalValuation) * 100).toFixed(1)}%</div>
-                      <div className="legend-item"><span className="dot cash"></span> Cash: {((walletBalance / totalValuation) * 100).toFixed(1)}%</div>
+                      <div className="legend-item"><span className="dot cash"></span> Cash: {((addedCash / totalValuation) * 100).toFixed(1)}%</div>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Holdings Grid */}
-              <h3 className="section-title">Your Physical Metal Vaults</h3>
+              <h3 className="section-title">Your Digital Meta Vaults</h3>
               <div className="holdings-grid">
                 {/* Gold Card */}
                 <div className="holding-card gold">
@@ -2318,6 +2864,7 @@ function App() {
                 width: '260px', 
                 flexShrink: 0, 
                 alignSelf: 'flex-start', 
+                marginTop: '160px',
                 background: 'rgba(217, 175, 86, 0.05)', 
                 border: '1px solid rgba(217, 175, 86, 0.2)', 
                 borderRadius: '16px', 
@@ -2486,53 +3033,252 @@ function App() {
               <ContestAwards 
                 user={user} 
                 rates={rates} 
+                walletBalance={walletBalance}
                 onTradeRedirect={() => setDashTab('trade')} 
               />
             </div>
           )}
 
-          {dashTab === 'profile' && (
-            <div className="tab-pane-view profile-view animate-fade-in">
-              <div className="profile-dashboard-layout">
-                <div className="profile-security-badge-card">
-                  <div className="security-icon-shield"><Shield size={42} className="shield-glow" /></div>
-                  <h3>Verified Vault Account</h3>
-                  <p className="profile-desc-p">Your digital assets are 100% physically stored in hyper-secure vaults and backed by a 1-to-1 ratio.</p>
-                  <div className="security-credentials-list">
-                    <div className="cred-row"><span>Vault Identifier</span><strong>IH-958204-A</strong></div>
-                    <div className="cred-row"><span>KYC Verification Status</span><strong className="positive-text"><Check size={12} /> SECURED & VERIFIED</strong></div>
-                    <div className="cred-row"><span>Security Standard</span><strong>Mandatory OTP Login Enabled</strong></div>
-                    <div className="cred-row"><span>Physical Vault Storage</span><strong>Brink&apos;s & Sequel London</strong></div>
-                  </div>
-                </div>
-                <div className="profile-details-settings-card">
-                  <h3>Account Settings</h3>
-                  <div className="profile-settings-grid">
-                    <div className="p-setting-item">
-                      <label>Vault Email Address</label>
-                      <input type="text" readOnly value={user?.email || ''} className="profile-readonly-input" />
+          {dashTab === 'profile' && (() => {
+            const cRecord = clients.find(c => c.email.toLowerCase() === user.email.toLowerCase()) || {
+              id: 'IH-958204-A',
+              kycStatus: 'Pending'
+            };
+            const currentKycStatus = cRecord.kycStatus || 'Pending';
+
+            return (
+              <div className="tab-pane-view profile-view animate-fade-in">
+                <div className="profile-dashboard-layout">
+                  {/* Left Column: Shield/Badge/Status Card */}
+                  {currentKycStatus === 'Verified' ? (
+                    <div className="profile-security-badge-card">
+                      <div className="security-icon-shield"><Shield size={42} className="shield-glow" /></div>
+                      <h3>Verified Vault Account</h3>
+                      <p className="profile-desc-p">Your digital assets are 100% physically stored in hyper-secure vaults and backed by a 1-to-1 ratio.</p>
+                      <div className="security-credentials-list">
+                        <div className="cred-row"><span>Vault Identifier</span><strong>{cRecord.id}</strong></div>
+                        <div className="cred-row"><span>KYC Verification Status</span><strong className="positive-text"><Check size={12} /> SECURED & VERIFIED</strong></div>
+                        <div className="cred-row"><span>Security Standard</span><strong>Mandatory OTP Login Enabled</strong></div>
+                        <div className="cred-row"><span>Physical Vault Storage</span><strong>Brink&apos;s & Sequel London</strong></div>
+                      </div>
                     </div>
-                    <div className="p-setting-item">
-                      <label>Vault Registered Date</label>
-                      <input type="text" readOnly value="May 18, 2026" className="profile-readonly-input" />
+                  ) : currentKycStatus === 'Submitted' ? (
+                    <div className="profile-security-badge-card">
+                      <div className="kyc-scanner-container">
+                        <div className="kyc-scanner-line"></div>
+                        <Shield size={42} style={{ color: '#f59e0b', filter: 'drop-shadow(0 0 8px rgba(245, 158, 11, 0.4))' }} />
+                      </div>
+                      <h3>Verification In Progress</h3>
+                      <p className="profile-desc-p">Our compliance team is verifying your details. This process typically takes between 2 to 4 hours.</p>
+                      <div className="security-credentials-list">
+                        <div className="cred-row"><span>Vault Identifier</span><strong>{cRecord.id}</strong></div>
+                        <div className="cred-row"><span>KYC Verification Status</span><strong style={{ color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '4px' }}><RefreshCw size={12} className="animate-spin" /> UNDER REVIEW</strong></div>
+                        <div className="cred-row"><span>Uploaded Document</span><strong>{cRecord.kycDocument?.type || 'ID Card'}</strong></div>
+                        <div className="cred-row"><span>Physical Vault Storage</span><strong>Brink&apos;s & Sequel London</strong></div>
+                      </div>
                     </div>
-                    <div className="p-setting-item">
-                      <label>Account Class</label>
-                      <input type="text" readOnly value="Premium Institutional Bullion Vault" className="profile-readonly-input" />
+                  ) : currentKycStatus === 'Rejected' ? (
+                    <div className="profile-security-badge-card">
+                      <div className="security-icon-shield" style={{ backgroundColor: 'rgba(239, 68, 68, 0.08)', borderColor: 'rgba(239, 68, 68, 0.2)' }}>
+                        <AlertTriangle size={42} style={{ color: '#ef4444', filter: 'drop-shadow(0 0 8px rgba(239, 68, 68, 0.4))' }} />
+                      </div>
+                      <h3 style={{ color: '#ef4444' }}>Verification Failed</h3>
+                      <p className="profile-desc-p">We were unable to verify your identity documents. Please review the reason below and submit again.</p>
+                      
+                      <div className="kyc-rejection-reason">
+                        <strong>Rejection Reason:</strong>
+                        <p style={{ margin: '4px 0 0 0', color: 'rgba(255, 255, 255, 0.8)' }}>
+                          {cRecord.kycRejectionReason || 'Uploaded document details could not be verified. Please ensure the image is clear and not cropped.'}
+                        </p>
+                      </div>
+
+                      <button 
+                        type="button" 
+                        className="btn-kyc-submit" 
+                        onClick={handleKycRestart}
+                        style={{ marginTop: '20px' }}
+                      >
+                        Restart Verification
+                      </button>
                     </div>
-                    <div className="p-setting-item">
-                      <label>Active Client Session ID</label>
-                      <input type="text" readOnly value="IH-SESSION-73019A" className="profile-readonly-input" />
+                  ) : (
+                    /* Pending State */
+                    <div className="profile-security-badge-card">
+                      <div className="security-icon-shield" style={{ backgroundColor: 'rgba(168, 85, 247, 0.04)', borderColor: 'rgba(168, 85, 247, 0.1)' }}>
+                        <Lock size={36} style={{ color: '#a855f7' }} />
+                      </div>
+                      <h3>Secure Your Vault</h3>
+                      <p className="profile-desc-p">Complete your Know Your Customer (KYC) check to activate secure physical storage and enable full trading capabilities.</p>
+                      <div className="security-credentials-list">
+                        <div className="cred-row"><span>Vault Identifier</span><strong>{cRecord.id}</strong></div>
+                        <div className="cred-row"><span>KYC Verification Status</span><strong style={{ color: '#9c93a8' }}>UNVERIFIED</strong></div>
+                        <div className="cred-row"><span>Requirements</span><strong>Aadhaar / PAN Card</strong></div>
+                      </div>
                     </div>
-                  </div>
-                  <div className="profile-quick-actions-row">
-                    <button type="button" className="btn-profile-secondary" onClick={() => alert('Downloading Vault Asset Certification PDF...')}><Download size={14} /> Download Vault Certificate</button>
-                    <button type="button" className="btn-profile-secondary" onClick={() => alert('Exporting all transaction logs as CSV...')}><Download size={14} /> Export Vault Ledger (CSV)</button>
-                  </div>
+                  )}
+
+                  {/* Right Column: Settings or Upload widget */}
+                  {currentKycStatus === 'Verified' || currentKycStatus === 'Submitted' ? (
+                    <div className="profile-details-settings-card">
+                      <h3>Account Settings</h3>
+                      <div className="profile-settings-grid">
+                        <div className="p-setting-item">
+                          <label>Vault Email Address</label>
+                          <input type="text" readOnly value={user?.email || ''} className="profile-readonly-input" />
+                        </div>
+                        <div className="p-setting-item">
+                          <label>Vault Registered Date</label>
+                          <input type="text" readOnly value="May 18, 2026" className="profile-readonly-input" />
+                        </div>
+                        <div className="p-setting-item">
+                          <label>Account Class</label>
+                          <input type="text" readOnly value="Premium Institutional Bullion Vault" className="profile-readonly-input" />
+                        </div>
+                        <div className="p-setting-item">
+                          <label>Active Client Session ID</label>
+                          <input type="text" readOnly value="IH-SESSION-73019A" className="profile-readonly-input" />
+                        </div>
+                      </div>
+
+                      {currentKycStatus === 'Submitted' && cRecord.kycDocument && (
+                        <div style={{ marginTop: '20px', borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: '20px' }}>
+                          <h4 style={{ fontSize: '13px', color: '#ffffff', marginBottom: '12px', fontWeight: 700 }}>Pending Document Details</h4>
+                          <div className="kyc-file-preview" style={{ marginTop: 0 }}>
+                            <div className="kyc-file-details">
+                              <FileText size={20} className="kyc-upload-icon" style={{ margin: 0 }} />
+                              <div className="kyc-file-info">
+                                <span className="kyc-file-name">{cRecord.kycDocument.fileName}</span>
+                                <span className="kyc-file-size">{cRecord.kycDocument.type} • {cRecord.kycDocument.fileSize} • Uploaded at {cRecord.kycDocument.uploadedAt}</span>
+                              </div>
+                            </div>
+                            <span style={{ fontSize: '11px', color: '#f59e0b', fontWeight: 800 }}>PENDING REVIEW</span>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="profile-quick-actions-row" style={{ marginTop: '20px' }}>
+                        <button 
+                          type="button" 
+                          className="btn-profile-secondary" 
+                          disabled={currentKycStatus !== 'Verified'}
+                          style={{ opacity: currentKycStatus === 'Verified' ? 1 : 0.5, cursor: currentKycStatus === 'Verified' ? 'pointer' : 'not-allowed' }}
+                          onClick={() => alert('Downloading Vault Asset Certification PDF...')}
+                        >
+                          <Download size={14} /> Download Vault Certificate
+                        </button>
+                        <button 
+                          type="button" 
+                          className="btn-profile-secondary" 
+                          disabled={currentKycStatus !== 'Verified'}
+                          style={{ opacity: currentKycStatus === 'Verified' ? 1 : 0.5, cursor: currentKycStatus === 'Verified' ? 'pointer' : 'not-allowed' }}
+                          onClick={() => alert('Exporting all transaction logs as CSV...')}
+                        >
+                          <Download size={14} /> Export Vault Ledger (CSV)
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Pending & Rejected: Show Upload Widget */
+                    <div className="profile-details-settings-card">
+                      <h3>KYC Document Upload Center</h3>
+                      
+                      {/* Document Selector Tabs */}
+                      <div className="kyc-doc-tabs">
+                        <button 
+                          type="button" 
+                          className={`kyc-doc-tab ${kycDocType === 'Aadhaar' ? 'active' : ''}`}
+                          onClick={() => setKycDocType('Aadhaar')}
+                        >
+                          Aadhaar Card
+                        </button>
+                        <button 
+                          type="button" 
+                          className={`kyc-doc-tab ${kycDocType === 'PAN' ? 'active' : ''}`}
+                          onClick={() => setKycDocType('PAN')}
+                        >
+                          PAN Card
+                        </button>
+                      </div>
+
+                      {/* Dropzone Area */}
+                      {!kycFile && !kycUploading && (
+                        <div 
+                          className={`kyc-upload-dropzone ${kycDragging ? 'dragging' : ''}`}
+                          onDragOver={(e) => { e.preventDefault(); setKycDragging(true); }}
+                          onDragLeave={() => setKycDragging(false)}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            setKycDragging(false);
+                            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                              handleKycFileSelect(e.dataTransfer.files[0]);
+                            }
+                          }}
+                          onClick={() => document.getElementById('kyc-file-input').click()}
+                        >
+                          <Upload size={28} className="kyc-upload-icon" />
+                          <span className="kyc-upload-title">Drag & drop your document here, or <span style={{ color: '#a855f7', textDecoration: 'underline' }}>browse files</span></span>
+                          <span className="kyc-upload-subtitle">Supports PDF, PNG, JPG (Max 5MB)</span>
+                          <input 
+                            id="kyc-file-input" 
+                            type="file" 
+                            style={{ display: 'none' }} 
+                            accept=".pdf,image/png,image/jpeg"
+                            onChange={(e) => {
+                              if (e.target.files && e.target.files[0]) {
+                                handleKycFileSelect(e.target.files[0]);
+                              }
+                            }}
+                          />
+                        </div>
+                      )}
+
+                      {/* Upload Progress Bar */}
+                      {kycUploading && (
+                        <div className="kyc-progress-container">
+                          <div className="kyc-progress-status">
+                            <span>{kycUploadStatusText}</span>
+                            <span>{kycUploadProgress}%</span>
+                          </div>
+                          <div className="kyc-progress-bg">
+                            <div className="kyc-progress-bar" style={{ width: `${kycUploadProgress}%` }}></div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* File Uploaded Preview */}
+                      {kycFile && !kycUploading && (
+                        <div className="kyc-file-preview">
+                          <div className="kyc-file-details">
+                            <FileText size={22} className="kyc-upload-icon" style={{ margin: 0 }} />
+                            <div className="kyc-file-info">
+                              <span className="kyc-file-name">{kycFile.name}</span>
+                              <span className="kyc-file-size">{(kycFile.size / 1024).toFixed(1)} KB</span>
+                            </div>
+                          </div>
+                          <button 
+                            type="button" 
+                            className="kyc-btn-delete"
+                            onClick={() => setKycFile(null)}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      )}
+
+                      <button 
+                        type="button" 
+                        className="btn-kyc-submit" 
+                        disabled={!kycFile || kycUploading}
+                        onClick={handleKycSubmit}
+                      >
+                        Submit KYC Verification
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {dashTab === 'referral' && (
             <div className="tab-pane-view referral-view animate-fade-in">
@@ -2629,42 +3375,7 @@ function App() {
                 </div>
               </div>
 
-              <div className="referral-ledger-section">
-                <div className="ledger-header">
-                  <h3>Referral Log Activity</h3>
-                  <span className="ref-count-tag">{successfulReferralsCount} Referred Friends</span>
-                </div>
-                <div className="activity-ledger-table-container">
-                  <table className="ledger-table">
-                    <thead>
-                      <tr>
-                        <th>Referral ID</th>
-                        <th>Invited User Email</th>
-                        <th>Signup Date</th>
-                        <th>Verification Status</th>
-                        <th>Vault Credit Reward</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {referralsList.map((ref) => (
-                        <tr key={ref.id}>
-                          <td className="tx-id-col">{ref.id}</td>
-                          <td><strong>{ref.email}</strong></td>
-                          <td>{ref.date}</td>
-                          <td>
-                            <span className={`status-badge ${ref.status === 'Completed' ? 'success' : (ref.status === 'Pending KYC' ? 'warning' : 'info')}`}>
-                              {ref.status}
-                            </span>
-                          </td>
-                          <td className="gold-reward-cell">
-                            {ref.status === 'Completed' ? `+₹10 Gold (${(10 / rates.gold.price).toFixed(4)} g)` : 'Pending'}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+
             </div>
           )}
         </main>
@@ -2742,6 +3453,107 @@ function App() {
     );
   }
 
+  // ─── Password Reset via Email Link ───────────────────────────────────────
+  if (resetToken && !resetDone) {
+    return (
+      <div id="root" className="auth-page-view">
+        <header className="header">
+          <div className="container nav-container">
+            <div className="logo-section" style={{ cursor: 'default' }}>
+              <InvesthourLogoText />
+            </div>
+          </div>
+        </header>
+        <div className="auth-container">
+          <div className="auth-card animate-fade-in">
+            <form className="auth-form" onSubmit={handleResetViaToken}>
+              <div className="auth-form-header">
+                <h2>Set New Password</h2>
+                <p>Choose a strong password for your account</p>
+              </div>
+
+              <div className="auth-input-group">
+                <label>New Password</label>
+                <div className="password-input-wrapper">
+                  <input
+                    type={resetShowPassword ? 'text' : 'password'}
+                    required
+                    placeholder="Min 6 characters"
+                    value={resetNewPassword}
+                    onChange={(e) => setResetNewPassword(e.target.value)}
+                  />
+                  <button type="button" className="password-eye-toggle" onClick={() => setResetShowPassword(!resetShowPassword)}>
+                    {resetShowPassword
+                      ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                      : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    }
+                  </button>
+                </div>
+              </div>
+
+              <div className="auth-input-group" style={{ marginTop: '14px' }}>
+                <label>Confirm New Password</label>
+                <div className="password-input-wrapper">
+                  <input
+                    type={resetShowPassword ? 'text' : 'password'}
+                    required
+                    placeholder="Re-enter new password"
+                    value={resetConfirmPassword}
+                    onChange={(e) => setResetConfirmPassword(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {resetError && (
+                <p style={{ color: '#ef4444', fontSize: '13px', marginTop: '10px', textAlign: 'center' }}>{resetError}</p>
+              )}
+
+              <button type="submit" className="btn-auth-submit" disabled={resetLoading} style={{ marginTop: '20px' }}>
+                {resetLoading ? 'Updating...' : 'Update Password'}
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (resetDone) {
+    return (
+      <div id="root" className="auth-page-view">
+        <header className="header">
+          <div className="container nav-container">
+            <div className="logo-section"><InvesthourLogoText /></div>
+          </div>
+        </header>
+        <div className="auth-container">
+          <div className="auth-card animate-fade-in" style={{ textAlign: 'center', padding: '48px 32px' }}>
+            <div style={{
+              width: 72, height: 72, borderRadius: '50%',
+              background: 'linear-gradient(135deg, rgba(34,197,94,0.15), rgba(34,197,94,0.05))',
+              border: '2px solid rgba(34,197,94,0.4)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 20px'
+            }}>
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </div>
+            <h2 style={{ color: '#22c55e', marginBottom: '8px' }}>Password Updated!</h2>
+            <p style={{ color: '#94a3b8', marginBottom: '28px' }}>Your password has been reset successfully. You can now sign in with your new password.</p>
+            <button
+              type="button"
+              className="btn-auth-submit"
+              onClick={() => { setView('auth'); setAuthTab('login'); }}
+            >
+              Go to Sign In
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (view === 'auth') {
     return (
       <div id="root" className="auth-page-view">
@@ -2755,11 +3567,80 @@ function App() {
         </header>
         <div className="auth-container">
           <div className="auth-card animate-fade-in">
-            <div className="auth-tabs">
-              <button type="button" className={`auth-tab-btn ${authTab === 'login' ? 'active' : ''}`} onClick={() => setAuthTab('login')}>Sign In</button>
-              <button type="button" className={`auth-tab-btn ${authTab === 'register' ? 'active' : ''}`} onClick={() => setAuthTab('register')}>Sign Up</button>
-            </div>
-            {authTab === 'login' ? (
+            {authTab !== 'forgot' && (
+              <div className="auth-tabs">
+                <button type="button" className={`auth-tab-btn ${authTab === 'login' ? 'active' : ''}`} onClick={() => { setAuthTab('login'); setShowPassword(false); }}>Sign In</button>
+                <button type="button" className={`auth-tab-btn ${authTab === 'register' ? 'active' : ''}`} onClick={() => { setAuthTab('register'); setShowPassword(false); }}>Sign Up</button>
+              </div>
+            )}
+            {authTab === 'forgot' ? (
+              <form className="auth-form" onSubmit={handleForgotPasswordRequest}>
+                <div className="auth-form-header">
+                  <h2>Reset Password</h2>
+                  <p>
+                    {forgotStep === 'sent'
+                      ? `We've sent a reset link to ${forgotEmail}`
+                      : 'Enter your email and we\'ll send you a password reset link'}
+                  </p>
+                </div>
+
+                {forgotStep === 'sent' ? (
+                  <div style={{ textAlign: 'center', padding: '24px 0' }}>
+                    <div style={{
+                      width: 72, height: 72, borderRadius: '50%',
+                      background: 'linear-gradient(135deg, rgba(240,180,41,0.15), rgba(240,180,41,0.05))',
+                      border: '2px solid rgba(240,180,41,0.4)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      margin: '0 auto 20px'
+                    }}>
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#f0b429" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                        <polyline points="22,6 12,13 2,6"/>
+                      </svg>
+                    </div>
+                    <p style={{ color: '#94a3b8', fontSize: '14px', lineHeight: 1.6, margin: '0 0 8px' }}>
+                      Check your inbox and click the <strong style={{ color: '#f0b429' }}>Reset My Password</strong> button in the email.
+                    </p>
+                    <p style={{ color: '#64748b', fontSize: '13px' }}>The link expires in 30 minutes. Check spam if you don't see it.</p>
+                    <button
+                      type="button"
+                      className="btn-profile-secondary"
+                      style={{ marginTop: '20px', width: '100%', justifyContent: 'center' }}
+                      onClick={() => { setForgotStep('request'); setForgotEmail(''); }}
+                    >
+                      Resend with a different email
+                    </button>
+                  </div>
+                ) : (
+                  <div className="auth-input-group">
+                    <label>Registered Email Address</label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="john@example.com"
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                    />
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '20px' }}>
+                  {forgotStep !== 'sent' && (
+                    <button type="submit" className="btn-auth-submit" disabled={forgotLoading}>
+                      {forgotLoading ? 'Sending...' : 'Send Reset Link'}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="btn-profile-secondary"
+                    style={{ width: '100%', justifyContent: 'center' }}
+                    onClick={() => { setAuthTab('login'); setForgotStep('request'); setForgotEmail(''); }}
+                  >
+                    Back to Sign In
+                  </button>
+                </div>
+              </form>
+            ) : authTab === 'login' ? (
               <form className="auth-form" onSubmit={handleSignInStart}>
                 <div className="auth-form-header"><h2>Welcome Back</h2><p>Access your precious metal vault securely</p></div>
                 <div className="auth-input-group">
@@ -2768,17 +3649,39 @@ function App() {
                 </div>
                 <div className="auth-input-group">
                   <label>Password</label>
-                  <input type="password" required placeholder="••••••••" value={authForm.password || ''} onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })} />
+                  <div className="password-input-wrapper">
+                    <input 
+                      type={showPassword ? "text" : "password"} 
+                      required 
+                      placeholder="••••••••" 
+                      value={authForm.password || ''} 
+                      onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })} 
+                    />
+                    <button 
+                      type="button" 
+                      className="password-eye-toggle" 
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                 </div>
                 <div className="auth-actions-row">
                   <label className="auth-checkbox"><input type="checkbox" /> Keep me signed in</label>
-                  <a href="#forgot" className="forgot-password">Forgot Password?</a>
+                  <button 
+                    type="button" 
+                    className="forgot-password" 
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }} 
+                    onClick={() => { setAuthTab('forgot'); setForgotStep('request'); }}
+                  >
+                    Forgot Password?
+                  </button>
                 </div>
                 <button type="submit" className="btn-auth-submit" disabled={otpSending}>{otpSending ? 'Signing In...' : 'Sign In Securely'}</button>
               </form>
-            ) : (
+            ) : signupStep === 'details' ? (
               <form className="auth-form" onSubmit={handleSignUp}>
-                <div className="auth-form-header"><h2>Create Vault</h2><p>Begin accumulating premium physical metals today</p></div>
+                <div className="auth-form-header"><h2>Create Vault</h2><p>Begin accumulating premium digital meta today</p></div>
                 <div className="auth-input-group">
                   <label>Full Name</label>
                   <input type="text" required placeholder="John Doe" value={authForm.name || ''} onChange={(e) => setAuthForm({ ...authForm, name: e.target.value })} />
@@ -2793,10 +3696,54 @@ function App() {
                 </div>
                 <div className="auth-input-group">
                   <label>Vault Password</label>
-                  <input type="password" required placeholder="Create secure password" value={authForm.password || ''} onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })} />
+                  <div className="password-input-wrapper">
+                    <input 
+                      type={showPassword ? "text" : "password"} 
+                      required 
+                      placeholder="Create secure password" 
+                      value={authForm.password || ''} 
+                      onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })} 
+                    />
+                    <button 
+                      type="button" 
+                      className="password-eye-toggle" 
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                 </div>
-                <label className="auth-checkbox agreement"><input type="checkbox" required /> I agree to the physical metal vaulting terms and conditions</label>
-                <button type="submit" className="btn-auth-submit" disabled={otpSending}>{otpSending ? 'Creating Vault...' : 'Create Vault Account'}</button>
+                <div className="auth-input-group">
+                  <label>Referral Code (Required) <span style={{color: '#ef4444'}}>*</span></label>
+                  <input type="text" placeholder="e.g. INVEST-WELCOME" required value={authForm.referralCode || ''} onChange={(e) => setAuthForm({ ...authForm, referralCode: e.target.value })} />
+                </div>
+                <label className="auth-checkbox agreement"><input type="checkbox" required /> I agree to the digital meta vaulting terms and conditions</label>
+                <button type="submit" className="btn-auth-submit" disabled={otpSending}>{otpSending ? 'Processing...' : 'Create Vault Account'}</button>
+              </form>
+            ) : (
+              <form className="auth-form" onSubmit={handleVerifySignupOtp}>
+                <div className="auth-form-header">
+                  <h2>Verify Email</h2>
+                  <p>Enter the 6-digit code sent to {authForm.email}</p>
+                </div>
+                <div className="auth-input-group">
+                  <label>Verification Code</label>
+                  <input 
+                    type="text" 
+                    maxLength={6} 
+                    required 
+                    placeholder="XXX-XXX" 
+                    value={signupOtp} 
+                    onChange={(e) => setSignupOtp(e.target.value)} 
+                    style={{ textAlign: 'center', letterSpacing: '8px', fontSize: '20px', fontWeight: 'bold' }} 
+                  />
+                </div>
+                <button type="submit" className="btn-auth-submit" disabled={otpSending}>
+                  {otpSending ? 'Verifying...' : 'Verify & Register'}
+                </button>
+                <div style={{ textAlign: 'center', marginTop: '16px' }}>
+                  <button type="button" onClick={() => setSignupStep('details')} style={{ background: 'none', border: 'none', color: '#9c93a8', cursor: 'pointer', fontSize: '13px' }}>Back to signup</button>
+                </div>
               </form>
             )}
           </div>
@@ -2881,6 +3828,7 @@ function App() {
           <ContestAwards 
             user={user} 
             rates={rates} 
+            walletBalance={walletBalance}
             onTradeRedirect={() => {
               if (user) {
                 setDashTab('trade');

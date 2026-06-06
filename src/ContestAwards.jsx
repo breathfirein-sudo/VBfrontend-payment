@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
-import { auth } from './firebase';
 import { getAuthToken } from './utils/authHelper';
 import { 
   Trophy, 
@@ -16,10 +15,10 @@ import {
 } from 'lucide-react';
 import './ContestAwards.css';
 
-const API_BASE_URL = `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/api/contest`;
-const SOCKET_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+const API_BASE_URL = `/api/contest`;
+const SOCKET_URL = '';
 
-const ContestAwards = ({ user, rates, onTradeRedirect }) => {
+const ContestAwards = ({ user, rates, walletBalance, onTradeRedirect }) => {
   const [profile, setProfile] = useState(null);
   const [trades, setTrades] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
@@ -102,7 +101,7 @@ const ContestAwards = ({ user, rates, onTradeRedirect }) => {
     
     socketRef.current.on('contest_trade_resolved', (resolvedTrade) => {
       // If the resolved trade belongs to the current user, refresh profile & trade feed
-      if (auth.currentUser && resolvedTrade.user_email === auth.currentUser.email.toLowerCase()) {
+      if (user && resolvedTrade.user_email === user.email.toLowerCase()) {
         fetchContestData();
       }
     });
@@ -204,7 +203,7 @@ const ContestAwards = ({ user, rates, onTradeRedirect }) => {
         <div className="registration-cta-card">
           <h2>Join the Annual Paper Trading Tournament</h2>
           <p>
-            Prove your trading prowess. Complete a minimum of 365 trades throughout the year with a starting balance of <strong>₹11,000</strong>. Secure a success rate of 60% or higher and become eligible for cash awards of up to ₹1,00,000 (1 Lakh).
+            Prove your trading prowess. Complete a minimum of 365 trades throughout the year. Secure a success rate of 60% or higher and become eligible for cash awards of up to ₹1,00,000 (1 Lakh).
           </p>
           <button 
             type="button" 
@@ -212,7 +211,7 @@ const ContestAwards = ({ user, rates, onTradeRedirect }) => {
             onClick={handleRegister}
             disabled={submitting}
           >
-            {submitting ? 'Registering Account...' : '🏆 Register & Receive ₹11,000 Paper Capital'}
+            {submitting ? 'Registering Account...' : '🏆 Register for Contest'}
           </button>
         </div>
       ) : (
@@ -224,7 +223,7 @@ const ContestAwards = ({ user, rates, onTradeRedirect }) => {
               <p>Your performance calculations, eligibility status, and paper trading wallet metrics are updated below in real time.</p>
               <div style={{ display: 'flex', gap: '15px', marginTop: '15px', alignItems: 'center' }}>
                 <span style={{ fontSize: '12px', background: 'rgba(217, 175, 86, 0.1)', color: '#d9af56', padding: '6px 12px', borderRadius: '20px', border: '1px solid rgba(217, 175, 86, 0.2)', fontWeight: 600 }}>
-                  Active Plan: ₹11,000 Initial Capital
+                  Active Plan: Standard
                 </span>
                 <span style={{ fontSize: '12.5px', color: '#9c93a8', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <Clock size={14} /> Registered: {profile?.registered_at ? new Date(profile.registered_at).toLocaleDateString() : ''}
@@ -235,7 +234,7 @@ const ContestAwards = ({ user, rates, onTradeRedirect }) => {
             <div className="contest-stat-box">
               <div className="contest-stat-label">Contest Balance</div>
               <div className="contest-stat-value gold">
-                ₹{parseFloat(profile?.balance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                ₹{parseFloat(walletBalance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
               </div>
             </div>
 

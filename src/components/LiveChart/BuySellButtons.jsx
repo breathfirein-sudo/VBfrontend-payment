@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { auth } from '../../firebase';
 import { getAuthToken } from '../../utils/authHelper';
 
 const BuySellButtons = ({ 
@@ -40,7 +39,7 @@ const BuySellButtons = ({
       const headers = await getAuthHeaders();
       
       if (isContest) {
-        const amt = parseFloat(riskAmount);
+        const amt = 100;
         if (isNaN(amt) || amt <= 0) {
           alert('Please enter a valid risk amount.');
           setLoading(false);
@@ -70,12 +69,8 @@ const BuySellButtons = ({
           }
         }
       } else {
-        const qty = parseFloat(standardQuantity);
-        if (isNaN(qty) || qty <= 0) {
-          alert('Please enter a valid quantity.');
-          setLoading(false);
-          return;
-        }
+        const amt = 100;
+        const qty = amt / currentPrice;
         
         // Standard paper trade with authentication scoping
         const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
@@ -99,7 +94,7 @@ const BuySellButtons = ({
   };
 
   return (
-    <div style={{ padding: '12px', background: 'rgba(255,255,255,0.01)', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+    <div style={{ padding: '8px 12px', background: 'rgba(255,255,255,0.01)', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
       {contestRegistered && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', gap: '15px' }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: '#d9af56', fontWeight: 'bold' }}>
@@ -118,8 +113,8 @@ const BuySellButtons = ({
                 <span style={{ position: 'absolute', left: '8px', color: '#9c93a8', fontSize: '12px' }}>₹</span>
                 <input 
                   type="number" 
-                  value={riskAmount}
-                  onChange={(e) => setRiskAmount(e.target.value)}
+                  value="100"
+                  readOnly
                   style={{ 
                     background: '#120524', 
                     color: '#ffffff', 
@@ -128,7 +123,9 @@ const BuySellButtons = ({
                     padding: '4px 8px 4px 18px', 
                     width: '80px', 
                     fontSize: '12px',
-                    fontWeight: 'bold'
+                    fontWeight: 'bold',
+                    cursor: 'not-allowed',
+                    opacity: 0.8
                   }}
                 />
               </div>
@@ -139,27 +136,8 @@ const BuySellButtons = ({
       )}
       
       {!isContest && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
           <span style={{ fontSize: '13px', color: '#ffffff', fontWeight: 'bold' }}>Standard Mode</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '12px', color: '#9c93a8' }}>Quantity (Lots):</span>
-            <input 
-              type="number" 
-              value={standardQuantity}
-              onChange={(e) => setStandardQuantity(e.target.value)}
-              style={{ 
-                background: '#120524', 
-                color: '#ffffff', 
-                border: '1px solid rgba(255,255,255,0.1)', 
-                borderRadius: '6px', 
-                padding: '4px 8px', 
-                width: '80px', 
-                fontSize: '12px',
-                fontWeight: 'bold',
-                textAlign: 'center'
-              }}
-            />
-          </div>
         </div>
       )}
 
@@ -168,17 +146,17 @@ const BuySellButtons = ({
           className="lc-btn-buy" 
           onClick={() => handleTrade('BUY')}
           disabled={loading}
-          style={{ flex: 1, padding: '12px', borderRadius: '8px', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer' }}
+          style={{ flex: 1, padding: '8px', borderRadius: '8px', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer' }}
         >
-          {loading ? 'Processing...' : 'Buy / Long'}
+          {loading ? 'Processing...' : 'Buy'}
         </button>
         <button 
           className="lc-btn-sell" 
           onClick={() => handleTrade('SELL')}
           disabled={loading}
-          style={{ flex: 1, padding: '12px', borderRadius: '8px', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer' }}
+          style={{ flex: 1, padding: '8px', borderRadius: '8px', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer' }}
         >
-          {loading ? 'Processing...' : 'Sell / Short'}
+          {loading ? 'Processing...' : 'Sell'}
         </button>
       </div>
     </div>

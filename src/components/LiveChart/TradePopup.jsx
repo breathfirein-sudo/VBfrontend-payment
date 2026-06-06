@@ -3,6 +3,13 @@ import React, { useEffect, useState } from 'react';
 const TradePopup = ({ trade, onClose }) => {
   const [visible, setVisible] = useState(false);
 
+  const handleClose = () => {
+    setVisible(false);
+    setTimeout(() => {
+      if (onClose) onClose();
+    }, 300); // Wait for CSS fade out before unmounting
+  };
+
   useEffect(() => {
     if (trade) {
       setVisible(true);
@@ -11,14 +18,7 @@ const TradePopup = ({ trade, onClose }) => {
       }, 5000);
       return () => clearTimeout(timer);
     }
-  }, [trade?.id]); // Only re-run when a NEW trade arrives
-
-  const handleClose = () => {
-    setVisible(false);
-    setTimeout(() => {
-      if (onClose) onClose();
-    }, 300); // Wait for CSS fade out before unmounting
-  };
+  }, [trade?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!trade) return null;
 

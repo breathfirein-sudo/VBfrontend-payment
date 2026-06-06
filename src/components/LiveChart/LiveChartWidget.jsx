@@ -6,7 +6,6 @@ import IntervalSelector from './IntervalSelector';
 import BuySellButtons from './BuySellButtons';
 import TradePopup from './TradePopup';
 import { Search, Settings, Maximize2, Camera, Trophy, Activity, Wallet, TrendingUp, TrendingDown } from 'lucide-react';
-import { auth } from '../../firebase';
 import { getAuthToken } from '../../utils/authHelper';
 import './LiveChart.css';
 
@@ -462,21 +461,21 @@ const LiveChartWidget = ({ user }) => {
               {/* Account Balance Summary Table */}
               <div className="lc-mt-summary-table">
                 <div className="lc-mt-summary-row">
-                  <span>Vklad (Deposit)</span>
+                  <span>Deposit</span>
                   <strong>{formatMTNumber(metrics.deposit)}</strong>
                 </div>
                 <div className="lc-mt-summary-row">
-                  <span>Zisk (Profit)</span>
+                  <span>Net P&L</span>
                   <strong className={metrics.profit > 0 ? 'positive' : (metrics.profit < 0 ? 'negative' : '')}>
                     {formatMTNumber(metrics.profit)}
                   </strong>
                 </div>
                 <div className="lc-mt-summary-row sub-row">
-                  <span style={{ paddingLeft: '12px', fontSize: '11px', color: '#8e8e93' }}>└ Ziskové (Profit)</span>
+                  <span style={{ paddingLeft: '12px', fontSize: '11px', color: '#8e8e93' }}>↳ Gross Profit</span>
                   <strong className="positive" style={{ fontSize: '11px' }}>{formatMTNumber(metrics.totalProfit)}</strong>
                 </div>
                 <div className="lc-mt-summary-row sub-row">
-                  <span style={{ paddingLeft: '12px', fontSize: '11px', color: '#8e8e93' }}>└ Ztrátové (Loss)</span>
+                  <span style={{ paddingLeft: '12px', fontSize: '11px', color: '#8e8e93' }}>↳ Gross Loss</span>
                   <strong className="negative" style={{ fontSize: '11px' }}>{formatMTNumber(metrics.totalLoss)}</strong>
                 </div>
                 <div className="lc-mt-summary-row">
@@ -484,13 +483,13 @@ const LiveChartWidget = ({ user }) => {
                   <strong>{formatMTNumber(metrics.swap)}</strong>
                 </div>
                 <div className="lc-mt-summary-row">
-                  <span>Provize (Commission)</span>
+                  <span>Commission</span>
                   <strong className={metrics.commission < 0 ? 'negative' : ''}>
                     {formatMTNumber(metrics.commission)}
                   </strong>
                 </div>
                 <div className="lc-mt-summary-row balance-row">
-                  <span>Zůstatek (Balance)</span>
+                  <span>Balance</span>
                   <strong>{formatMTNumber(metrics.balance)}</strong>
                 </div>
               </div>
