@@ -401,6 +401,7 @@ function App() {
   // --- Interactive Deposit / Withdrawal Fields ---
   const [depositAmount, setDepositAmount] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
 
   // --- Real-time Transaction Log Ledger ---
   const [transactions, setTransactions] = useState([]);
@@ -915,7 +916,10 @@ function App() {
         const gst = finalRupees * 0.18;
         const totalCost = finalRupees + gst;
         if (walletBalance < totalCost) {
+          alert(`Insufficient wallet balance. You need ₹${totalCost.toFixed(2)} but only have ₹${walletBalance.toFixed(2)}. Please add funds.`);
           setShowModal(false);
+          setDashTab('wallet');
+          setView('dashboard');
           return;
         }
         // Deduct wallet and add holdings
@@ -3045,27 +3049,16 @@ function App() {
                           }}
                         />
                       </div>
-                      <div className="funding-input-group">
-                        <label>Withdraw Amount (INR)</label>
-                        <div className="funding-input-field-wrapper">
-                          <span className="currency-symbol">{'\u20b9'}</span>
-                          <input type="number" placeholder="Enter amount to withdraw" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} />
-                        </div>
-                        <RazorpayButton 
-                          amount={parseFloat(withdrawAmount) || 0} 
-                          type="withdraw" 
-                          onSuccess={(data) => {
-                            const val = parseFloat(withdrawAmount);
-                            setWalletBalance((prev) => parseFloat((prev - val).toFixed(2)));
-                            setTransactions((prev) => [{ id: `TX-${Math.floor(1000 + Math.random() * 9000)}`, type: 'withdrawal', asset: 'wallet', amount: val, weight: 0, date: new Date().toISOString().slice(0, 16).replace('T', ' '), status: 'Completed' }, ...prev]);
-                            setWithdrawAmount('');
-                          }}
-                          onError={(err) => {
-                            if (err?.response?.data?.error === 'Insufficient wallet balance' || walletBalance < parseFloat(withdrawAmount)) {
-                               alert('Insufficient balance in your secure wallet.');
-                            }
-                          }}
-                        />
+                      </div>
+                      <div className="funding-input-group" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                        <button 
+                          type="button"
+                          className="btn-modal-confirm" 
+                          style={{ marginTop: 'auto', background: 'linear-gradient(135deg, #1f1f2e 0%, #0f0f1a 100%)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold' }}
+                          onClick={() => setShowWithdrawModal(true)}
+                        >
+                          Withdraw Funds
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -3480,6 +3473,53 @@ function App() {
                 <input type="text" placeholder="Type your question..." value={chatMessage} onChange={(e) => setChatMessage(e.target.value)} style={chatInputStyle} />
                 <button type="submit" style={chatSendBtnStyle}><Send size={16} /></button>
               </form>
+            </div>
+          </div>
+        )}
+
+        {showWithdrawModal && (
+          <div className="modal-overlay">
+            <div className="modal-content">
+              <div className="modal-header">
+                <span className="modal-title">Withdraw Funds</span>
+                <button type="button" className="modal-close" onClick={() => setShowWithdrawModal(false)}><X size={20} /></button>
+              </div>
+              <div className="modal-body">
+                <p style={{ color: '#9c93a8', fontSize: '14px', marginBottom: '16px', textAlign: 'center' }}>Minimum withdrawal is ₹500.</p>
+                <div className="funding-input-group" style={{ marginBottom: '20px' }}>
+                  <label>Amount to Withdraw (INR)</label>
+                  <div className="funding-input-field-wrapper">
+                    <span className="currency-symbol">{'\u20b9'}</span>
+                    <input type="number" placeholder="Enter amount (min 500)" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} />
+                  </div>
+                </div>
+                <RazorpayButton 
+                  amount={parseFloat(withdrawAmount) || 0} 
+                  type="withdraw" 
+                  onSuccess={(data) => {
+                    const val = parseFloat(withdrawAmount);
+                    if (val < 500) {
+                      alert('Minimum withdrawal is ₹500.');
+                      return;
+                    }
+                    if (walletBalance < val) {
+                      alert('Insufficient balance in your secure wallet.');
+                      return;
+                    }
+                    setWalletBalance((prev) => parseFloat((prev - val).toFixed(2)));
+                    setTransactions((prev) => [{ id: `TX-${Math.floor(1000 + Math.random() * 9000)}`, type: 'withdrawal', asset: 'wallet', amount: val, weight: 0, date: new Date().toISOString().slice(0, 16).replace('T', ' '), status: 'Completed' }, ...prev]);
+                    setWithdrawAmount('');
+                    setShowWithdrawModal(false);
+                  }}
+                  onError={(err) => {
+                    if (err?.response?.data?.error === 'Insufficient wallet balance' || walletBalance < parseFloat(withdrawAmount)) {
+                       alert('Insufficient balance in your secure wallet.');
+                    } else if (parseFloat(withdrawAmount) < 500) {
+                       alert('Minimum withdrawal is ₹500.');
+                    }
+                  }}
+                />
+              </div>
             </div>
           </div>
         )}
@@ -3985,6 +4025,53 @@ function App() {
           </div>
         </header>
         <AboutUs rates={rates} holdings={holdings} walletBalance={walletBalance} isLoggedIn={!!user} onRequireAuth={() => setView('auth')} onTradeRequest={handleAboutTradeRequest} onExplore={() => { setDashTab('trade'); setView('dashboard'); }} />
+        {showWithdrawModal && (
+          <div className="modal-overlay">
+            <div className="modal-content">
+              <div className="modal-header">
+                <span className="modal-title">Withdraw Funds</span>
+                <button type="button" className="modal-close" onClick={() => setShowWithdrawModal(false)}><X size={20} /></button>
+              </div>
+              <div className="modal-body">
+                <p style={{ color: '#9c93a8', fontSize: '14px', marginBottom: '16px', textAlign: 'center' }}>Minimum withdrawal is ₹500.</p>
+                <div className="funding-input-group" style={{ marginBottom: '20px' }}>
+                  <label>Amount to Withdraw (INR)</label>
+                  <div className="funding-input-field-wrapper">
+                    <span className="currency-symbol">{'\u20b9'}</span>
+                    <input type="number" placeholder="Enter amount (min 500)" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} />
+                  </div>
+                </div>
+                <RazorpayButton 
+                  amount={parseFloat(withdrawAmount) || 0} 
+                  type="withdraw" 
+                  onSuccess={(data) => {
+                    const val = parseFloat(withdrawAmount);
+                    if (val < 500) {
+                      alert('Minimum withdrawal is ₹500.');
+                      return;
+                    }
+                    if (walletBalance < val) {
+                      alert('Insufficient balance in your secure wallet.');
+                      return;
+                    }
+                    setWalletBalance((prev) => parseFloat((prev - val).toFixed(2)));
+                    setTransactions((prev) => [{ id: `TX-${Math.floor(1000 + Math.random() * 9000)}`, type: 'withdrawal', asset: 'wallet', amount: val, weight: 0, date: new Date().toISOString().slice(0, 16).replace('T', ' '), status: 'Completed' }, ...prev]);
+                    setWithdrawAmount('');
+                    setShowWithdrawModal(false);
+                  }}
+                  onError={(err) => {
+                    if (err?.response?.data?.error === 'Insufficient wallet balance' || walletBalance < parseFloat(withdrawAmount)) {
+                       alert('Insufficient balance in your secure wallet.');
+                    } else if (parseFloat(withdrawAmount) < 500) {
+                       alert('Minimum withdrawal is ₹500.');
+                    }
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
         {showModal && (
           <div className="modal-overlay">
             <div className="modal-content">
