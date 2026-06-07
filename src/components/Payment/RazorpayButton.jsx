@@ -13,7 +13,7 @@ const loadRazorpayScript = () => {
   });
 };
 
-const RazorpayButton = ({ amount, type, onSuccess, onError }) => {
+const RazorpayButton = ({ amount, type, onSuccess, onError, payoutDetails }) => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -41,40 +41,10 @@ const RazorpayButton = ({ amount, type, onSuccess, onError }) => {
     try {
       let payoutDetails = null;
 
-      // If it's a withdrawal, prompt user for details before making the API request
+      // If it's a withdrawal, ensure payoutDetails are provided
       if (type === 'withdraw') {
-        const choice = window.prompt("Withdraw to:\n1. UPI ID (Type '1')\n2. Bank Account (Type '2')\nEnter choice (1 or 2):", "1");
-        
-        if (!choice) {
-          setLoading(false);
-          return;
-        }
-
-        if (choice.trim() === '1') {
-          const upiId = window.prompt("Please enter your UPI ID (e.g. name@upi):");
-          if (!upiId || !upiId.includes('@')) {
-            alert("Withdrawal cancelled. A valid UPI ID is required.");
-            setLoading(false);
-            return;
-          }
-          payoutDetails = { upiId };
-        } else if (choice.trim() === '2') {
-          const bankName = window.prompt("Enter Bank Beneficiary Name:");
-          const accountNumber = window.prompt("Enter Bank Account Number:");
-          const ifsc = window.prompt("Enter Bank IFSC Code:");
-          
-          if (!bankName || !accountNumber || !ifsc) {
-            alert("Withdrawal cancelled. Bank Beneficiary Name, Account Number, and IFSC are required.");
-            setLoading(false);
-            return;
-          }
-          payoutDetails = {
-            accountName: bankName,
-            accountNumber: accountNumber,
-            ifsc: ifsc.toUpperCase()
-          };
-        } else {
-          alert("Invalid choice. Withdrawal cancelled.");
+        if (!payoutDetails) {
+          alert("Please fill out all the required withdrawal payout details (UPI or Bank Account).");
           setLoading(false);
           return;
         }

@@ -402,6 +402,11 @@ function App() {
   const [depositAmount, setDepositAmount] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [withdrawMethod, setWithdrawMethod] = useState('upi'); // 'upi' or 'bank'
+  const [upiId, setUpiId] = useState('');
+  const [bankName, setBankName] = useState('');
+  const [accountNumber, setAccountNumber] = useState('');
+  const [ifscCode, setIfscCode] = useState('');
 
   // --- Real-time Transaction Log Ledger ---
   const [transactions, setTransactions] = useState([]);
@@ -3484,17 +3489,52 @@ function App() {
                 <button type="button" className="modal-close" onClick={() => setShowWithdrawModal(false)}><X size={20} /></button>
               </div>
               <div className="modal-body">
-                <p style={{ color: '#9c93a8', fontSize: '14px', marginBottom: '16px', textAlign: 'center' }}>Minimum withdrawal is ₹500.</p>
-                <div className="funding-input-group" style={{ marginBottom: '20px' }}>
+                <p style={{ color: '#9c93a8', fontSize: '14px', marginBottom: '20px', textAlign: 'center' }}>Securely withdraw your wallet balance to your bank or UPI.</p>
+                
+                <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+                  <button type="button" onClick={() => setWithdrawMethod('upi')} style={{ flex: 1, padding: '12px', borderRadius: '12px', border: withdrawMethod === 'upi' ? '1px solid #d9af56' : '1px solid rgba(255,255,255,0.1)', background: withdrawMethod === 'upi' ? 'rgba(217, 175, 86, 0.1)' : 'rgba(0,0,0,0.2)', color: withdrawMethod === 'upi' ? '#d9af56' : '#fff', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}>UPI ID</button>
+                  <button type="button" onClick={() => setWithdrawMethod('bank')} style={{ flex: 1, padding: '12px', borderRadius: '12px', border: withdrawMethod === 'bank' ? '1px solid #d9af56' : '1px solid rgba(255,255,255,0.1)', background: withdrawMethod === 'bank' ? 'rgba(217, 175, 86, 0.1)' : 'rgba(0,0,0,0.2)', color: withdrawMethod === 'bank' ? '#d9af56' : '#fff', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}>Bank Transfer</button>
+                </div>
+
+                <div className="funding-input-group" style={{ marginBottom: '16px' }}>
                   <label>Amount to Withdraw (INR)</label>
                   <div className="funding-input-field-wrapper">
                     <span className="currency-symbol">{'\u20b9'}</span>
                     <input type="number" placeholder="Enter amount (min 500)" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} />
                   </div>
                 </div>
+
+                {withdrawMethod === 'upi' ? (
+                  <div className="funding-input-group" style={{ marginBottom: '24px' }}>
+                    <label>UPI ID</label>
+                    <input type="text" placeholder="e.g. name@upi" value={upiId} onChange={(e) => setUpiId(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.2)', color: '#fff', outline: 'none' }} />
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
+                    <div className="funding-input-group">
+                      <label>Bank Beneficiary Name</label>
+                      <input type="text" placeholder="Account Holder Name" value={bankName} onChange={(e) => setBankName(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.2)', color: '#fff', outline: 'none' }} />
+                    </div>
+                    <div style={{ display: 'flex', gap: '16px' }}>
+                      <div className="funding-input-group" style={{ flex: 1 }}>
+                        <label>Account Number</label>
+                        <input type="text" placeholder="Account Number" value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.2)', color: '#fff', outline: 'none' }} />
+                      </div>
+                      <div className="funding-input-group" style={{ flex: 1 }}>
+                        <label>IFSC Code</label>
+                        <input type="text" placeholder="IFSC Code" value={ifscCode} onChange={(e) => setIfscCode(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.2)', color: '#fff', outline: 'none', textTransform: 'uppercase' }} />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <RazorpayButton 
                   amount={parseFloat(withdrawAmount) || 0} 
                   type="withdraw" 
+                  payoutDetails={
+                    withdrawMethod === 'upi' ? (upiId ? { upiId } : null) : 
+                    (bankName && accountNumber && ifscCode ? { accountName: bankName, accountNumber, ifsc: ifscCode.toUpperCase() } : null)
+                  }
                   onSuccess={(data) => {
                     const val = parseFloat(withdrawAmount);
                     if (val < 500) {
@@ -4032,17 +4072,52 @@ function App() {
                 <button type="button" className="modal-close" onClick={() => setShowWithdrawModal(false)}><X size={20} /></button>
               </div>
               <div className="modal-body">
-                <p style={{ color: '#9c93a8', fontSize: '14px', marginBottom: '16px', textAlign: 'center' }}>Minimum withdrawal is ₹500.</p>
-                <div className="funding-input-group" style={{ marginBottom: '20px' }}>
+                <p style={{ color: '#9c93a8', fontSize: '14px', marginBottom: '20px', textAlign: 'center' }}>Securely withdraw your wallet balance to your bank or UPI.</p>
+                
+                <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+                  <button type="button" onClick={() => setWithdrawMethod('upi')} style={{ flex: 1, padding: '12px', borderRadius: '12px', border: withdrawMethod === 'upi' ? '1px solid #d9af56' : '1px solid rgba(255,255,255,0.1)', background: withdrawMethod === 'upi' ? 'rgba(217, 175, 86, 0.1)' : 'rgba(0,0,0,0.2)', color: withdrawMethod === 'upi' ? '#d9af56' : '#fff', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}>UPI ID</button>
+                  <button type="button" onClick={() => setWithdrawMethod('bank')} style={{ flex: 1, padding: '12px', borderRadius: '12px', border: withdrawMethod === 'bank' ? '1px solid #d9af56' : '1px solid rgba(255,255,255,0.1)', background: withdrawMethod === 'bank' ? 'rgba(217, 175, 86, 0.1)' : 'rgba(0,0,0,0.2)', color: withdrawMethod === 'bank' ? '#d9af56' : '#fff', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}>Bank Transfer</button>
+                </div>
+
+                <div className="funding-input-group" style={{ marginBottom: '16px' }}>
                   <label>Amount to Withdraw (INR)</label>
                   <div className="funding-input-field-wrapper">
                     <span className="currency-symbol">{'\u20b9'}</span>
                     <input type="number" placeholder="Enter amount (min 500)" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} />
                   </div>
                 </div>
+
+                {withdrawMethod === 'upi' ? (
+                  <div className="funding-input-group" style={{ marginBottom: '24px' }}>
+                    <label>UPI ID</label>
+                    <input type="text" placeholder="e.g. name@upi" value={upiId} onChange={(e) => setUpiId(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.2)', color: '#fff', outline: 'none' }} />
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
+                    <div className="funding-input-group">
+                      <label>Bank Beneficiary Name</label>
+                      <input type="text" placeholder="Account Holder Name" value={bankName} onChange={(e) => setBankName(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.2)', color: '#fff', outline: 'none' }} />
+                    </div>
+                    <div style={{ display: 'flex', gap: '16px' }}>
+                      <div className="funding-input-group" style={{ flex: 1 }}>
+                        <label>Account Number</label>
+                        <input type="text" placeholder="Account Number" value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.2)', color: '#fff', outline: 'none' }} />
+                      </div>
+                      <div className="funding-input-group" style={{ flex: 1 }}>
+                        <label>IFSC Code</label>
+                        <input type="text" placeholder="IFSC Code" value={ifscCode} onChange={(e) => setIfscCode(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.2)', color: '#fff', outline: 'none', textTransform: 'uppercase' }} />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <RazorpayButton 
                   amount={parseFloat(withdrawAmount) || 0} 
                   type="withdraw" 
+                  payoutDetails={
+                    withdrawMethod === 'upi' ? (upiId ? { upiId } : null) : 
+                    (bankName && accountNumber && ifscCode ? { accountName: bankName, accountNumber, ifsc: ifscCode.toUpperCase() } : null)
+                  }
                   onSuccess={(data) => {
                     const val = parseFloat(withdrawAmount);
                     if (val < 500) {
