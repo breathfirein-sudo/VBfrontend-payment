@@ -66,8 +66,8 @@ const INITIAL_RATES = {
 
 const VITE_BACKEND_URL = import.meta.env.VITE_BACKEND_URL || (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:5000' : 'https://hour-60kr.onrender.com');
 
-// Timeout-aware fetch wrapper (default 30s)
-const fetchWithTimeout = (url, options = {}, timeoutMs = 30000) => {
+// Timeout-aware fetch wrapper (default 90s for cold starts)
+const fetchWithTimeout = (url, options = {}, timeoutMs = 90000) => {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   return fetch(url, { ...options, signal: controller.signal })
