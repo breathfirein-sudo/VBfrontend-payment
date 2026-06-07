@@ -39,27 +39,56 @@ const RazorpayButton = ({ amount, type, onSuccess, onError }) => {
 
     setLoading(true);
     try {
-      // 1. Create order on our backend
-      const orderData = await createOrder(amount, type);
+      let payoutDetails = null;
 
-      if (!orderData.success) {
-        throw new Error('Failed to initiate transaction');
-      }
-
-      // If it's a withdrawal, it auto-completes in the backend (simulation)
+      // If it's a withdrawal, prompt user for details before making the API request
       if (type === 'withdraw') {
-        const upiId = window.prompt("Please enter your UPI ID or Bank Account Number to receive the withdrawal:");
+        const choice = window.prompt("Withdraw to:\n1. UPI ID (Type '1')\n2. Bank Account (Type '2')\nEnter choice (1 or 2):", "1");
         
-        if (!upiId) {
-          alert("Withdrawal cancelled. You must provide a valid UPI ID or Bank Account.");
+        if (!choice) {
           setLoading(false);
           return;
         }
 
-        // Simulate a tiny processing delay for realism
-        await new Promise(resolve => setTimeout(resolve, 800));
+        if (choice.trim() === '1') {
+          const upiId = window.prompt("Please enter your UPI ID (e.g. name@upi):");
+          if (!upiId || !upiId.includes('@')) {
+            alert("Withdrawal cancelled. A valid UPI ID is required.");
+            setLoading(false);
+            return;
+          }
+          payoutDetails = { upiId };
+        } else if (choice.trim() === '2') {
+          const bankName = window.prompt("Enter Bank Beneficiary Name:");
+          const accountNumber = window.prompt("Enter Bank Account Number:");
+          const ifsc = window.prompt("Enter Bank IFSC Code:");
+          
+          if (!bankName || !accountNumber || !ifsc) {
+            alert("Withdrawal cancelled. Bank Beneficiary Name, Account Number, and IFSC are required.");
+            setLoading(false);
+            return;
+          }
+          payoutDetails = {
+            accountName: bankName,
+            accountNumber: accountNumber,
+            ifsc: ifsc.toUpperCase()
+          };
+        } else {
+          alert("Invalid choice. Withdrawal cancelled.");
+          setLoading(false);
+          return;
+        }
+      }
 
-        alert(`Successfully initiated withdrawal of ₹${amount} to ${upiId}. Funds deducted from wallet and will arrive in 24 hours.`);
+      // 1. Create order on our backend
+      const orderData = await createOrder(amount, type, payoutDetails);
+
+      if (!orderData.success) {
+        throw new Error(orderData.error || 'Failed to initiate transaction');
+      }
+
+      if (type === 'withdraw') {
+        alert(`Successfully initiated withdrawal of ₹${amount} via Razorpay! Payout ID: ${orderData.payoutId || 'N/A'}`);
         if (onSuccess) onSuccess(orderData);
         setLoading(false);
         return;
