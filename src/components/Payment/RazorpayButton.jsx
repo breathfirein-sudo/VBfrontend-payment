@@ -145,7 +145,9 @@ const RazorpayButton = ({ amount, type, onSuccess, onError }) => {
 
     } catch (error) {
       console.error(error);
-      alert(error.response?.data?.error || `Error processing ${type}. Please try again.`);
+      const errMsg = error.response?.data?.error || `Error processing ${type}. Please try again.`;
+      const errDetails = error.response?.data?.details ? `\nDetails: ${error.response.data.details}` : '';
+      alert(errMsg + errDetails);
       if (onError) onError(error);
     } finally {
       setLoading(false);
