@@ -170,6 +170,20 @@
 @media (max-width: 768px) {
   .prize-cards-container {
     grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .prize-card {
+    padding: 24px;
+    border-radius: 20px;
+  }
+  .prize-badge {
+    font-size: 40px;
+  }
+  .contest-page-content {
+    padding: 20px 16px;
+  }
+  .rank-pill {
+    padding: 6px 12px;
   }
 }
 

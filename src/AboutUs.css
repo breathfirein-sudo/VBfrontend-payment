@@ -1048,7 +1048,19 @@
 
 @media (max-width: 600px) {
   .metals-periodic-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  .element-card {
+    padding: 12px;
+    border-radius: 16px;
+    min-height: 120px;
+  }
+  .element-symbol {
+    font-size: 28px;
+  }
+  .element-name {
+    font-size: 13px;
   }
   .highlights-grid {
     grid-template-columns: 1fr;
@@ -1058,9 +1070,17 @@
     align-items: stretch;
   }
   .search-sort-box {
+    width: 100%;
+  }
+  .modal-right-pane {
+    padding: 24px;
+  }
+  .modal-action-buttons {
     flex-direction: column;
-    align-items: stretch;
-    max-width: 100%;
+  }
+  .modal-action-buttons button {
+    width: 100%;
+    min-height: 48px;
   }
   .sort-select-wrapper {
     justify-content: space-between;

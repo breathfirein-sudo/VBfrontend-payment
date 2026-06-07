@@ -2891,6 +2891,38 @@
   }
 }
 
+@media (max-width: 768px) {
+  .portfolio-value-card {
+    padding: 24px;
+    border-radius: 20px;
+  }
+  .total-valuation-display {
+    font-size: 32px;
+  }
+  .credit-card-wallet {
+    padding: 20px;
+    border-radius: 16px;
+    min-height: 160px;
+  }
+  .wallet-funding-actions {
+    padding: 16px;
+    border-radius: 16px;
+  }
+  .funding-input-group input {
+    font-size: 16px; /* Prevent iOS zoom */
+    padding: 14px;
+  }
+  .btn-modal-confirm, .wallet-funding-actions button {
+    padding: 14px;
+    font-size: 15px;
+    min-height: 48px; /* Touch target */
+  }
+  .tab-pane-view.trade-view {
+    padding: 0 16px !important;
+    flex-direction: column !important;
+  }
+}
+
 @media (max-width: 640px) {
   .holdings-grid {
     grid-template-columns: 1fr;
@@ -3372,4 +3404,83 @@
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(217, 175, 86, 0.4);
   background: linear-gradient(135deg, var(--color-gold-hover) 0%, var(--color-gold) 100%);
+}
+
+/* ==========================================
+   MOBILE BOTTOM NAVIGATION & LAYOUT
+   ========================================== */
+@media (max-width: 768px) {
+  /* Override previous display: none on .nav-menu */
+  header .nav-menu {
+    display: none; /* Keep header nav hidden on mobile to rely on bottom nav */
+  }
+  
+  .dashboard-shell {
+    padding-bottom: 90px !important; /* Space for bottom nav */
+  }
+
+  /* Transform the top nav-menu into a fixed bottom bar */
+  .nav-menu.dashboard-nav {
+    display: flex !important;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 70px;
+    background: rgba(10, 5, 20, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+    justify-content: flex-start;
+    align-items: center;
+    padding: 0 10px;
+    gap: 8px;
+    margin: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+  }
+
+  .nav-menu.dashboard-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .dash-nav-item {
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 12px;
+    font-size: 10.5px;
+    border-radius: 12px;
+    min-width: max-content;
+    background: transparent;
+    border: none !important;
+    box-shadow: none !important;
+    font-weight: 600;
+    opacity: 0.6;
+    transition: all 0.3s ease;
+  }
+
+  .dash-nav-item svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .dash-nav-item.active {
+    color: var(--color-gold);
+    background: transparent;
+    opacity: 1;
+  }
+
+  .dash-nav-item.active svg {
+    filter: drop-shadow(0 0 8px rgba(217, 175, 86, 0.6));
+    transform: translateY(-2px);
+  }
+
+  .dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
 }
