@@ -3049,7 +3049,6 @@ function App() {
                           }}
                         />
                       </div>
-                      </div>
                       <div className="funding-input-group" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                         <button 
                           type="button"
