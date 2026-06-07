@@ -64,7 +64,20 @@ const INITIAL_RATES = {
   gold: { price: 6143.57, change: 48.96, pct: 0.80 }
 };
 
-const VITE_BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
+const VITE_BACKEND_URL = import.meta.env.VITE_BACKEND_URL || (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:5000' : 'https://hour-60kr.onrender.com');
+
+// Timeout-aware fetch wrapper (default 30s)
+const fetchWithTimeout = (url, options = {}, timeoutMs = 30000) => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...options, signal: controller.signal })
+    .finally(() => clearTimeout(timer));
+};
+
+// Warm up the Render backend on page load to avoid cold-start delays
+if (typeof window !== 'undefined') {
+  fetch(`${VITE_BACKEND_URL}/api/health`).catch(() => {});
+}
 
 const InvesthourLogoText = ({ customStyle, suffix }) => (
   <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', ...customStyle }}>
@@ -284,7 +297,7 @@ function App() {
     if (resetNewPassword !== resetConfirmPassword) return setResetError('Passwords do not match.');
     setResetLoading(true);
     try {
-      const response = await fetch(`${VITE_BACKEND_URL}/api/auth/reset-password`, {
+      const response = await fetchWithTimeout(`${VITE_BACKEND_URL}/api/auth/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: resetToken, newPassword: resetNewPassword })
@@ -312,7 +325,7 @@ function App() {
     
     setForgotLoading(true);
     try {
-      const response = await fetch(`${VITE_BACKEND_URL}/api/auth/forgot-password`, {
+      const response = await fetchWithTimeout(`${VITE_BACKEND_URL}/api/auth/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: forgotEmail })
@@ -938,7 +951,7 @@ function App() {
     setOtpTimer(120);
 
     try {
-      const response = await fetch(`${VITE_BACKEND_URL}/api/auth/send-otp`, {
+      const response = await fetchWithTimeout(`${VITE_BACKEND_URL}/api/auth/send-otp`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -961,7 +974,8 @@ function App() {
       }, 100);
     } catch (err) {
       console.error("Backend OTP Dispatch Error:", err);
-      setOtpError(`Server Connection Failed: ${err.message}`);
+      const errMsg = err.name === 'AbortError' ? 'Server is waking up, please try again in a few seconds.' : `Server Connection Failed: ${err.message}`;
+      setOtpError(errMsg);
       setOtpSending(false);
     }
   };
@@ -976,7 +990,7 @@ function App() {
     setOtpSending(true);
 
     try {
-      const response = await fetch(`${VITE_BACKEND_URL}/api/auth/login`, {
+      const response = await fetchWithTimeout(`${VITE_BACKEND_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1024,7 +1038,7 @@ function App() {
     setOtpSending(true);
 
     try {
-      const response = await fetch(`${VITE_BACKEND_URL}/api/auth/send-otp`, {
+      const response = await fetchWithTimeout(`${VITE_BACKEND_URL}/api/auth/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: authForm.email })
@@ -1035,7 +1049,7 @@ function App() {
       }
       setSignupStep('verify');
     } catch (err) {
-      alert(err.message);
+      alert(err.name === 'AbortError' ? 'Server is waking up, please try again in a few seconds.' : err.message);
     } finally {
       setOtpSending(false);
     }
@@ -1048,7 +1062,7 @@ function App() {
     setOtpSending(true);
     try {
       // 1. Verify OTP
-      const otpRes = await fetch(`${VITE_BACKEND_URL}/api/auth/verify-otp`, {
+      const otpRes = await fetchWithTimeout(`${VITE_BACKEND_URL}/api/auth/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: authForm.email, otp: signupOtp })
@@ -1059,7 +1073,7 @@ function App() {
       }
 
       // 2. Register
-      const response = await fetch(`${VITE_BACKEND_URL}/api/auth/register`, {
+      const response = await fetchWithTimeout(`${VITE_BACKEND_URL}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1149,7 +1163,7 @@ function App() {
       setAuthForm({ name: '', email: '', phone: '', password: '', referralCode: '' });
     } catch (error) {
       console.error("DB Register failed:", error.message);
-      alert(error.message);
+      alert(error.name === 'AbortError' ? 'Server is waking up, please try again in a few seconds.' : error.message);
     } finally {
       setOtpSending(false);
     }

@@ -9,8 +9,9 @@ import { Search, Settings, Maximize2, Camera, Trophy, Activity, Wallet, Trending
 import { getAuthToken } from '../../utils/authHelper';
 import './LiveChart.css';
 
-const SOCKET_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
-const API_URL = `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/api`;
+const backendUrl = import.meta.env.VITE_BACKEND_URL || (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:5000' : 'https://hour-60kr.onrender.com');
+const SOCKET_URL = backendUrl;
+const API_URL = `${backendUrl}/api`;
 
 const LiveChartWidget = ({ user }) => {
   const [symbol, setSymbol] = useState('TSLA');
