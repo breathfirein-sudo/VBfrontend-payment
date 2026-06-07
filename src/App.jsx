@@ -456,8 +456,11 @@ function App() {
             const existingClient = prevClients.find(c => c.email.toLowerCase() === dbClient.email.toLowerCase());
             if (existingClient) {
               return {
+                ...existingClient,
                 ...dbClient,
-                referralCount: existingClient.referralCount !== undefined ? existingClient.referralCount : 0
+                referralCount: dbClient.referralCount !== undefined ? dbClient.referralCount : (existingClient.referralCount || 0),
+                walletBalance: dbClient.walletBalance !== undefined ? dbClient.walletBalance : (existingClient.walletBalance || 0),
+                transactions: dbClient.transactions !== undefined ? dbClient.transactions : (existingClient.transactions || [])
               };
             }
             return dbClient;
@@ -677,7 +680,7 @@ function App() {
           name: user.displayName || user.email.split('@')[0],
           email: user.email,
           phone: '',
-          walletBalance: 0,
+          walletBalance: 100000,
           holdings: createInitialHoldings({}),
           kycStatus: 'Pending',
           transactions: [],
@@ -693,6 +696,59 @@ function App() {
         setTransactions(cRecord.transactions);
         setSuccessfulReferralsCount(cRecord.referralCount);
       }
+
+      // Sync user profile state from backend database in real-time
+      fetch(`${VITE_BACKEND_URL}/api/auth/validate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: user.email })
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.valid) {
+            if (data.referralCount !== undefined) {
+              setSuccessfulReferralsCount(data.referralCount);
+            }
+            if (data.walletBalance !== undefined) {
+              setWalletBalance(data.walletBalance);
+            }
+            if (data.transactions !== undefined) {
+              const mappedTx = data.transactions.map(t => ({
+                id: 'TX-' + t.id,
+                type: t.type?.toLowerCase() === 'deposit' ? 'deposit' : 'withdrawal',
+                asset: t.asset || 'wallet',
+                amount: t.amount,
+                status: 'Completed',
+                date: new Date(t.createdAt).toISOString().slice(0, 16).replace('T', ' ')
+              }));
+              setTransactions(mappedTx);
+            }
+            // Update the local storage client record
+            setClients(prev => {
+              const updated = prev.map(c => {
+                if (c.email.toLowerCase() === user.email.toLowerCase()) {
+                  return {
+                    ...c,
+                    walletBalance: data.walletBalance !== undefined ? data.walletBalance : c.walletBalance,
+                    referralCount: data.referralCount !== undefined ? data.referralCount : c.referralCount,
+                    transactions: data.transactions !== undefined ? data.transactions.map(t => ({
+                      id: 'TX-' + t.id,
+                      type: t.type?.toLowerCase() === 'deposit' ? 'deposit' : 'withdrawal',
+                      asset: t.asset || 'wallet',
+                      amount: t.amount,
+                      status: 'Completed',
+                      date: new Date(t.createdAt).toISOString().slice(0, 16).replace('T', ' ')
+                    })) : c.transactions
+                  };
+                }
+                return c;
+              });
+              localStorage.setItem('vb_clients', JSON.stringify(updated));
+              return updated;
+            });
+          }
+        })
+        .catch(err => console.error("Error syncing user profile from DB:", err));
     }
   }, [user]);
 
@@ -3728,8 +3784,8 @@ function App() {
                   </div>
                 </div>
                 <div className="auth-input-group">
-                  <label>Referral Code (Required) <span style={{color: '#ef4444'}}>*</span></label>
-                  <input type="text" placeholder="e.g. INVEST-WELCOME" required value={authForm.referralCode || ''} onChange={(e) => setAuthForm({ ...authForm, referralCode: e.target.value })} />
+                  <label>Referral Code (Optional)</label>
+                  <input type="text" placeholder="e.g. INVEST-WELCOME" value={authForm.referralCode || ''} onChange={(e) => setAuthForm({ ...authForm, referralCode: e.target.value })} />
                 </div>
                 <label className="auth-checkbox agreement"><input type="checkbox" required /> I agree to the digital meta vaulting terms and conditions</label>
                 <button type="submit" className="btn-auth-submit" disabled={otpSending}>{otpSending ? 'Processing...' : 'Create Vault Account'}</button>
