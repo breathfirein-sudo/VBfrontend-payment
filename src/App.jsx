@@ -680,7 +680,7 @@ function App() {
           name: user.displayName || user.email.split('@')[0],
           email: user.email,
           phone: '',
-          walletBalance: 100000,
+          walletBalance: 0,
           holdings: createInitialHoldings({}),
           kycStatus: 'Pending',
           transactions: [],
