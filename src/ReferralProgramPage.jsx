@@ -8,7 +8,7 @@ export default function ReferralProgramPage({ rates, onRequireAuth, isLoggedIn, 
   const faqs = [
     {
       question: "How does the referral bonus program work?",
-      answer: "It's simple! Share your unique referral link with your friends. Once they register a vault account and complete their KYC check, you will instantly get ₹10 worth of Gold credited to your vault. If you successfully refer 1,500 people, you also qualify for the milestone reward of a 1 Gram Physical Gold Coin!"
+      answer: "It's simple! Share your unique referral link with your friends. Once they register a vault account and complete their KYC check, you will instantly get a Gold bonus credited to your vault. If you successfully refer 1,500 people, you also qualify for the milestone reward of a 1 Gram Physical Gold Coin!"
     },
     {
       question: "Is there a limit on how many friends I can refer?",
@@ -47,7 +47,7 @@ export default function ReferralProgramPage({ rates, onRequireAuth, isLoggedIn, 
           </p>
           <div className="hero-grid-offers">
             <div className="offer-box">
-              <span className="offer-value">₹10 Gold</span>
+              <span className="offer-value">Gold Payout</span>
               <span className="offer-title">Per Verified Referral</span>
             </div>
             <div className="offer-divider">+</div>
@@ -88,7 +88,7 @@ export default function ReferralProgramPage({ rates, onRequireAuth, isLoggedIn, 
           <div className="step-card-box">
             <div className="step-badge-num">3</div>
             <h3>Accumulate Gold</h3>
-            <p>₹10 worth of physically-backed gold is instantly credited to your vault. Track invites in real-time on your dashboard ledger.</p>
+            <p>Physically-backed gold is instantly credited to your vault. Track invites in real-time on your dashboard ledger.</p>
           </div>
         </div>
       </section>

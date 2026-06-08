@@ -31,15 +31,22 @@ const RazorpayButton = ({ amount, type, onSuccess, onError, payoutDetails }) => 
         alert("Minimum deposit amount is ₹100");
         return;
       }
-      if (amount > 10000) {
-        alert("Maximum deposit amount is ₹10000");
+      if (amount > 100000) {
+        alert("Maximum deposit amount is ₹1,00,000");
+        return;
+      }
+    }
+
+    if (type === 'withdraw') {
+      if (amount < 500) {
+        alert("Minimum withdrawal amount is ₹500");
         return;
       }
     }
 
     setLoading(true);
     try {
-      let payoutDetails = null;
+      let detailsToSend = null;
 
       // If it's a withdrawal, ensure payoutDetails are provided
       if (type === 'withdraw') {
@@ -48,10 +55,11 @@ const RazorpayButton = ({ amount, type, onSuccess, onError, payoutDetails }) => 
           setLoading(false);
           return;
         }
+        detailsToSend = payoutDetails;
       }
 
       // 1. Create order on our backend
-      const orderData = await createOrder(amount, type, payoutDetails);
+      const orderData = await createOrder(amount, type, detailsToSend);
 
       if (!orderData.success) {
         throw new Error(orderData.error || 'Failed to initiate transaction');

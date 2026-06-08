@@ -14,7 +14,8 @@ const BuySellButtons = ({
   riskAmount,
   setRiskAmount,
   contestBalance,
-  setContestBalance
+  setContestBalance,
+  withdrawableBalance = 0
 }) => {
   const [loading, setLoading] = useState(false);
   const [standardQuantity, setStandardQuantity] = useState('50');
@@ -70,6 +71,11 @@ const BuySellButtons = ({
         }
       } else {
         const amt = 100;
+        if (withdrawableBalance < amt) {
+          alert(`Insufficient withdrawable balance. You cannot trade with referral rewards. You need at least ₹${amt.toFixed(2)} in added funds but only have ₹${withdrawableBalance.toFixed(2)} withdrawable balance.`);
+          setLoading(false);
+          return;
+        }
         const qty = amt / currentPrice;
         
         // Standard paper trade with authentication scoping

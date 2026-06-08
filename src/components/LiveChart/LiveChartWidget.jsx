@@ -13,7 +13,7 @@ const backendUrl = import.meta.env.VITE_BACKEND_URL || (typeof window !== 'undef
 const SOCKET_URL = backendUrl;
 const API_URL = `${backendUrl}/api`;
 
-const LiveChartWidget = ({ user }) => {
+const LiveChartWidget = ({ user, withdrawableBalance = 0 }) => {
   const [symbol, setSymbol] = useState('TSLA');
   const [interval, setIntervalTime] = useState('1m');
   const [candles, setCandles] = useState([]);
@@ -394,6 +394,7 @@ const LiveChartWidget = ({ user }) => {
             setRiskAmount={setRiskAmount}
             contestBalance={contestBalance}
             setContestBalance={setContestBalance}
+            withdrawableBalance={withdrawableBalance}
           />
         </div>
 

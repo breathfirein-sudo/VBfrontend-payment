@@ -297,13 +297,13 @@ const tail = `
         </header>
         <div className="auth-container">
           <div className="auth-card animate-fade-in">
-            <div className="auth-tabs">
+             <div className="auth-tabs">
               <button type="button" className={\`auth-tab-btn \${authTab === 'login' ? 'active' : ''}\`} onClick={() => setAuthTab('login')}>Sign In</button>
               <button type="button" className={\`auth-tab-btn \${authTab === 'register' ? 'active' : ''}\`} onClick={() => setAuthTab('register')}>Sign Up</button>
             </div>
             {authTab === 'login' ? (
               <form className="auth-form" onSubmit={handleSignInStart}>
-                <div className="auth-form-header"><h2>Welcome Back</h2><p>Access your precious metal vault securely</p></div>
+                <div className="auth-form-header"><h2>Welcome Back</h2><p>Access your precious meta vault securely</p></div>
                 <div className="auth-input-group">
                   <label>Email</label>
                   <input type="text" required placeholder="Enter email" value={authForm.email || ''} onChange={(e) => setAuthForm({ ...authForm, email: e.target.value })} />

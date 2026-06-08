@@ -397,7 +397,7 @@ function App() {
   const [holdings, setHoldings] = useState(() =>
     createInitialHoldings({})
   );
-  
+
   // --- Interactive Deposit / Withdrawal Fields ---
   const [depositAmount, setDepositAmount] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
@@ -407,6 +407,9 @@ function App() {
   const [bankName, setBankName] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [ifscCode, setIfscCode] = useState('');
+
+
+  const withdrawableBalance = Math.max(0, walletBalance - (successfulReferralsCount * 10));
 
   // --- Real-time Transaction Log Ledger ---
   const [transactions, setTransactions] = useState([]);
@@ -436,6 +439,45 @@ function App() {
   const [selectedContestParticipant, setSelectedContestParticipant] = useState(null);
   const [contestParticipantTrades, setContestParticipantTrades] = useState([]);
   const [contestSearchQuery, setContestSearchQuery] = useState('');
+  
+  // --- Admin Withdrawal Request States & Methods ---
+  const [adminWithdrawals, setAdminWithdrawals] = useState([]);
+  const [fetchingWithdrawals, setFetchingWithdrawals] = useState(false);
+
+  const fetchAdminWithdrawals = async () => {
+    setFetchingWithdrawals(true);
+    try {
+      const res = await fetch(`${VITE_BACKEND_URL}/api/admin/withdrawals`);
+      const data = await res.json();
+      if (data.success) {
+        setAdminWithdrawals(data.withdrawals || []);
+      }
+    } catch (e) {
+      console.error("Error fetching withdrawals:", e);
+    } finally {
+      setFetchingWithdrawals(false);
+    }
+  };
+
+  // Platform Profit (fees + GST from trades)
+  const [platformProfit, setPlatformProfit] = useState({ totalFees: 0, totalGst: 0, totalProfit: 0, tradeCount: 0 });
+
+  const fetchPlatformProfit = async () => {
+    try {
+      const res = await fetch(`${VITE_BACKEND_URL}/api/admin/platform-profit`);
+      const data = await res.json();
+      if (data.success) {
+        setPlatformProfit({
+          totalFees: data.totalFees || 0,
+          totalGst: data.totalGst || 0,
+          totalProfit: data.totalProfit || 0,
+          tradeCount: data.tradeCount || 0
+        });
+      }
+    } catch (e) {
+      console.error("Error fetching platform profit:", e);
+    }
+  };
 
   const fetchAdminContestData = async () => {
     try {
@@ -578,14 +620,19 @@ function App() {
   };
 
   useEffect(() => {
-    if (user && user.email === 'sandeepkumar.pikili@vrpigroup.co.in' && adminTab === 'contest') {
-      fetchAdminContestData();
+    if (user && user.email === 'sandeepkumar.pikili@vrpigroup.co.in') {
+      if (adminTab === 'contest') {
+        fetchAdminContestData();
+      } else if (adminTab === 'withdrawals') {
+        fetchAdminWithdrawals();
+      }
     }
   }, [user, adminTab]);
 
   useEffect(() => {
     if (user && user.email === 'sandeepkumar.pikili@vrpigroup.co.in') {
       fetchAdminClientsData();
+      fetchPlatformProfit();
     }
   }, [user]);
 
@@ -676,10 +723,15 @@ function App() {
     if (user && user.email !== 'sandeepkumar.pikili@vrpigroup.co.in') {
       const match = clients.find(c => c.email.toLowerCase() === user.email.toLowerCase());
       if (match) {
-        setWalletBalance(match.walletBalance || 0);
+        // Load non-balance data from localStorage instantly for speed
         setHoldings(createInitialHoldings(match.holdings || {}));
-        setTransactions(match.transactions || []);
         setSuccessfulReferralsCount(match.referralCount || 0);
+        // Load transactions from localStorage as a temporary display (backend will override)
+        if (match.transactions && match.transactions.length > 0) {
+          setTransactions(match.transactions);
+        }
+        // For wallet balance: start with localStorage value but backend WILL override it
+        setWalletBalance(match.walletBalance || 0);
       } else {
         const cRecord = {
           id: `CUST-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -697,13 +749,13 @@ function App() {
           localStorage.setItem('vb_clients', JSON.stringify(next));
           return next;
         });
-        setWalletBalance(cRecord.walletBalance);
+        setWalletBalance(0);
         setHoldings(cRecord.holdings);
         setTransactions(cRecord.transactions);
         setSuccessfulReferralsCount(cRecord.referralCount);
       }
 
-      // Sync user profile state from backend database in real-time
+      // *** PRIMARY SOURCE OF TRUTH: Always sync from backend DB on login ***
       fetch(`${VITE_BACKEND_URL}/api/auth/validate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -715,13 +767,16 @@ function App() {
             if (data.referralCount !== undefined) {
               setSuccessfulReferralsCount(data.referralCount);
             }
+            // ALWAYS use backend balance — it's the authoritative value
             if (data.walletBalance !== undefined) {
               setWalletBalance(data.walletBalance);
             }
             if (data.transactions !== undefined) {
               const mappedTx = data.transactions.map(t => ({
                 id: 'TX-' + t.id,
-                type: t.type?.toLowerCase() === 'deposit' ? 'deposit' : 'withdrawal',
+                type: t.type?.toLowerCase() === 'deposit' ? 'deposit' : 
+                      t.type?.toLowerCase() === 'referral' ? 'referral' : 
+                      t.type?.toLowerCase() === 'refund' ? 'refund' : 'withdrawal',
                 asset: t.asset || 'wallet',
                 amount: t.amount,
                 status: 'Completed',
@@ -729,7 +784,7 @@ function App() {
               }));
               setTransactions(mappedTx);
             }
-            // Update the local storage client record
+            // Update localStorage with the correct backend values
             setClients(prev => {
               const updated = prev.map(c => {
                 if (c.email.toLowerCase() === user.email.toLowerCase()) {
@@ -739,7 +794,9 @@ function App() {
                     referralCount: data.referralCount !== undefined ? data.referralCount : c.referralCount,
                     transactions: data.transactions !== undefined ? data.transactions.map(t => ({
                       id: 'TX-' + t.id,
-                      type: t.type?.toLowerCase() === 'deposit' ? 'deposit' : 'withdrawal',
+                      type: t.type?.toLowerCase() === 'deposit' ? 'deposit' : 
+                            t.type?.toLowerCase() === 'referral' ? 'referral' : 
+                            t.type?.toLowerCase() === 'refund' ? 'refund' : 'withdrawal',
                       asset: t.asset || 'wallet',
                       amount: t.amount,
                       status: 'Completed',
@@ -758,7 +815,11 @@ function App() {
     }
   }, [user]);
 
+
+
+
   // Simulator removed to prevent dummy data generation
+
 
   // --- Real-time Calculations ---
   // Convert Rupees -> Grams
@@ -834,6 +895,17 @@ function App() {
 
   // --- Auth Session State Listener ---
   useEffect(() => {
+    const startTime = Date.now();
+    const minDelay = 2000; // 2 seconds minimum loading screen time
+
+    const finishLoading = () => {
+      const elapsed = Date.now() - startTime;
+      const remaining = Math.max(0, minDelay - elapsed);
+      setTimeout(() => {
+        setLoading(false);
+      }, remaining);
+    };
+
     const savedLocalUser = localStorage.getItem('vb_local_user');
     if (savedLocalUser) {
       try {
@@ -842,7 +914,7 @@ function App() {
         if (parsed.email === 'sandeepkumar.pikili@vrpigroup.co.in') {
           setUser(parsed);
           setView('dashboard');
-          setLoading(false);
+          finishLoading();
           return;
         }
 
@@ -864,13 +936,13 @@ function App() {
               setUser(null);
               setView('home');
             }
-            setLoading(false);
+            finishLoading();
           })
           .catch(e => {
             console.error("Validation failed, falling back to local:", e);
             setUser(parsed);
             setView('dashboard');
-            setLoading(false);
+            finishLoading();
           });
         return;
       } catch (e) {
@@ -880,7 +952,7 @@ function App() {
     } else {
       setView(prev => prev === 'dashboard' ? 'home' : prev);
     }
-    setLoading(false);
+    finishLoading();
   }, []);
 
   // --- Transaction Triggers ---
@@ -920,8 +992,8 @@ function App() {
       if (action === 'buy') {
         const gst = finalRupees * 0.18;
         const totalCost = finalRupees + gst;
-        if (walletBalance < totalCost) {
-          alert(`Insufficient wallet balance. You need ₹${totalCost.toFixed(2)} but only have ₹${walletBalance.toFixed(2)}. Please add funds.`);
+        if (withdrawableBalance < totalCost) {
+          alert(`Insufficient withdrawable balance. Referral rewards cannot be used for buying elements. You need ₹${totalCost.toFixed(2)} but only have ₹${withdrawableBalance.toFixed(2)} withdrawable balance. Please add funds.`);
           setShowModal(false);
           setDashTab('wallet');
           setView('dashboard');
@@ -1076,7 +1148,11 @@ function App() {
       localStorage.setItem('vb_jwt_token', data.token);
       localStorage.setItem('vb_local_user', JSON.stringify(localUser));
       setUser(localUser);
+      setLoading(true);
       setView('dashboard');
+      setTimeout(() => {
+        setLoading(false);
+      }, 2000);
     } catch (error) {
       console.warn("DB Auth login failed, checking fallback:", error.message);
       // Hardcoded fallback for Super Admin check if backend is not reachable / DB fails (for development safety)
@@ -1084,7 +1160,11 @@ function App() {
         const localUser = { email: 'sandeepkumar.pikili@vrpigroup.co.in', uid: 'admin-super-uid', displayName: 'Super Admin' };
         localStorage.setItem('vb_local_user', JSON.stringify(localUser));
         setUser(localUser);
+        setLoading(true);
         setView('dashboard');
+        setTimeout(() => {
+          setLoading(false);
+        }, 2000);
         return;
       }
       alert(error.message);
@@ -1097,6 +1177,12 @@ function App() {
     e.preventDefault();
     if (!authForm.email || !authForm.password) {
       alert("Please enter a valid email and custom vault password.");
+      return;
+    }
+
+    const emailLower = authForm.email.trim().toLowerCase();
+    if (!emailLower.endsWith('@gmail.com')) {
+      alert("Please enter a valid email ID.");
       return;
     }
 
@@ -1193,7 +1279,7 @@ function App() {
               const newBalance = (c.walletBalance || 0) + 10;
               const newTx = {
                 id: `TX-${Math.floor(1000 + Math.random() * 9000)}`,
-                type: 'deposit',
+                type: 'referral',
                 asset: 'wallet',
                 amount: 10,
                 weight: 0,
@@ -1293,7 +1379,7 @@ function App() {
       <div id="root" className="loading-view">
         <div className="spinner-container">
           <div className="gold-spinner"></div>
-          <h2>Unlocking Your Metal Vault...</h2>
+          <h2>Unlocking Your Meta Vault...</h2>
           <p>Establishing quantum-secure channel & loading assets</p>
         </div>
       </div>
@@ -1455,6 +1541,30 @@ function App() {
               </div>
             </div>
 
+            {/* Metric 5 - Platform Profit from Client Trades */}
+            <div style={{ background: '#120524', border: '1px solid rgba(217,175,86,0.15)', padding: '20px', borderRadius: '14px', display: 'flex', alignItems: 'center', gap: '16px', position: 'relative' }}>
+              <div style={{ background: 'rgba(217, 175, 86, 0.12)', color: '#d9af56', padding: '12px', borderRadius: '10px', flexShrink: 0 }}>
+                <TrendingUp size={24} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ color: '#9c93a8', fontSize: '12px', display: 'block', textTransform: 'uppercase', letterSpacing: '1px' }}>Profit Received from Clients</span>
+                <span style={{ fontSize: '24px', fontWeight: '800', color: '#d9af56' }}>
+                  ₹{platformProfit.totalProfit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+                <div style={{ display: 'flex', gap: '12px', marginTop: '4px' }}>
+                  <span style={{ fontSize: '11px', color: '#9c93a8' }}>
+                    Fees: <span style={{ color: '#10b981', fontWeight: 700 }}>₹{platformProfit.totalFees.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                  </span>
+                  <span style={{ fontSize: '11px', color: '#9c93a8' }}>
+                    GST: <span style={{ color: '#f59e0b', fontWeight: 700 }}>₹{platformProfit.totalGst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                  </span>
+                  <span style={{ fontSize: '11px', color: '#9c93a8' }}>
+                    {platformProfit.tradeCount} <span style={{ color: '#9c93a8' }}>trades</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+
           </div>
 
           {/* Admin Tabs Toggle */}
@@ -1512,6 +1622,24 @@ function App() {
               }}
             >
               🎁 Referral Program Tracking
+            </button>
+            <button 
+              type="button"
+              onClick={() => setAdminTab('withdrawals')}
+              style={{
+                background: adminTab === 'withdrawals' ? '#f43f5e' : 'transparent',
+                color: '#ffffff',
+                border: '1px solid',
+                borderColor: adminTab === 'withdrawals' ? '#f43f5e' : 'rgba(255,255,255,0.15)',
+                padding: '10px 20px',
+                borderRadius: '8px',
+                fontWeight: 700,
+                fontSize: '14px',
+                cursor: 'pointer',
+                transition: 'all 0.3s'
+              }}
+            >
+              💰 Withdrawal Requests
             </button>
           </div>
 
@@ -1796,95 +1924,7 @@ function App() {
                     </div>
                     
                     <div style={{ display: 'flex', gap: '8px' }}>
-                      {inspectedClient.kycStatus === 'Verified' ? (
-                        <button 
-                          onClick={() => {
-                            const updated = clients.map(c => {
-                              if (c.id === inspectedClient.id) {
-                                return { ...c, kycStatus: 'Pending', kycDocument: null, kycRejectionReason: null };
-                              }
-                              return c;
-                            });
-                            setClients(updated);
-                            localStorage.setItem('vb_clients', JSON.stringify(updated));
-                          }}
-                          style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
-                        >
-                          Revoke Verification
-                        </button>
-                      ) : inspectedClient.kycStatus === 'Submitted' ? (
-                        <>
-                          <button 
-                            onClick={async () => {
-                              try {
-                                const res = await fetch(`${VITE_BACKEND_URL}/api/admin/kyc/update`, {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ userId: inspectedClient.id.replace('CUST-', ''), status: 'Verified' })
-                                });
-                                if (!res.ok) throw new Error('Update failed');
-                                const updated = clients.map(c => {
-                                  if (c.id === inspectedClient.id) {
-                                    return { ...c, kycStatus: 'Verified', kycRejectionReason: null };
-                                  }
-                                  return c;
-                                });
-                                setClients(updated);
-                                localStorage.setItem('vb_clients', JSON.stringify(updated));
-                              } catch (e) {
-                                alert('Failed to update KYC status.');
-                              }
-                            }}
-                            style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.2)', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
-                          >
-                            Approve
-                          </button>
-                          <button 
-                            onClick={async () => {
-                              const reason = prompt("Enter KYC rejection reason:", "The uploaded document image was blurry. Please ensure all details are clearly readable.");
-                              if (reason === null) return; // cancelled
-                              try {
-                                const res = await fetch(`${VITE_BACKEND_URL}/api/admin/kyc/update`, {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ userId: inspectedClient.id.replace('CUST-', ''), status: 'Rejected' })
-                                });
-                                if (!res.ok) throw new Error('Update failed');
-                                const updated = clients.map(c => {
-                                  if (c.id === inspectedClient.id) {
-                                    return { ...c, kycStatus: 'Rejected', kycRejectionReason: reason || 'Uploaded document details could not be verified.' };
-                                  }
-                                  return c;
-                                });
-                                setClients(updated);
-                                localStorage.setItem('vb_clients', JSON.stringify(updated));
-                              } catch (e) {
-                                alert('Failed to update KYC status.');
-                              }
-                            }}
-                            style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
-                          >
-                            Reject
-                          </button>
-                        </>
-                      ) : inspectedClient.kycStatus === 'Rejected' ? (
-                        <button 
-                          onClick={() => {
-                            const updated = clients.map(c => {
-                              if (c.id === inspectedClient.id) {
-                                return { ...c, kycStatus: 'Pending', kycDocument: null, kycRejectionReason: null };
-                              }
-                              return c;
-                            });
-                            setClients(updated);
-                            localStorage.setItem('vb_clients', JSON.stringify(updated));
-                          }}
-                          style={{ background: 'rgba(255, 255, 255, 0.05)', color: '#ffffff', border: '1px solid rgba(255, 255, 255, 0.1)', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
-                        >
-                          Reset to Pending
-                        </button>
-                      ) : (
-                        /* Pending */
+                      {inspectedClient.kycStatus !== 'Verified' && (
                         <button 
                           onClick={async () => {
                             try {
@@ -1908,43 +1948,211 @@ function App() {
                           }}
                           style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.2)', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
                         >
-                          Force Verify
+                          Approve
+                        </button>
+                      )}
+                      {inspectedClient.kycStatus !== 'Rejected' && (
+                        <button 
+                          onClick={async () => {
+                            const reason = prompt("Enter KYC rejection reason:", "The uploaded document image was blurry. Please ensure all details are clearly readable.");
+                            if (reason === null) return; // cancelled
+                            try {
+                              const res = await fetch(`${VITE_BACKEND_URL}/api/admin/kyc/update`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ userId: inspectedClient.id.replace('CUST-', ''), status: 'Rejected' })
+                              });
+                              if (!res.ok) throw new Error('Update failed');
+                              const updated = clients.map(c => {
+                                if (c.id === inspectedClient.id) {
+                                  return { ...c, kycStatus: 'Rejected', kycRejectionReason: reason || 'Uploaded document details could not be verified.' };
+                                }
+                                return c;
+                              });
+                              setClients(updated);
+                              localStorage.setItem('vb_clients', JSON.stringify(updated));
+                            } catch (e) {
+                              alert('Failed to update KYC status.');
+                            }
+                          }}
+                          style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                        >
+                          Reject
+                        </button>
+                      )}
+                      {inspectedClient.kycStatus !== 'Pending' && (
+                        <button 
+                          onClick={async () => {
+                            try {
+                              const res = await fetch(`${VITE_BACKEND_URL}/api/admin/kyc/update`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ userId: inspectedClient.id.replace('CUST-', ''), status: 'Pending' })
+                              });
+                              if (!res.ok) throw new Error('Update failed');
+                              const updated = clients.map(c => {
+                                if (c.id === inspectedClient.id) {
+                                  return { ...c, kycStatus: 'Pending', kycRejectionReason: null };
+                                }
+                                return c;
+                              });
+                              setClients(updated);
+                              localStorage.setItem('vb_clients', JSON.stringify(updated));
+                            } catch (e) {
+                              alert('Failed to reset KYC status.');
+                            }
+                          }}
+                          style={{ background: 'rgba(255, 255, 255, 0.05)', color: '#ffffff', border: '1px solid rgba(255, 255, 255, 0.1)', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                        >
+                          Reset to Pending
                         </button>
                       )}
                     </div>
                   </div>
 
-                  {inspectedClient.kycDocument && (
+                  {inspectedClient.kycDocument ? (
                     <div style={{ marginTop: '8px', borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '10px' }}>
                       <span style={{ fontSize: '11px', color: '#9c93a8', display: 'block', marginBottom: '6px' }}>Uploaded Verification File:</span>
                       <div className="kyc-file-preview" style={{ marginTop: 0, padding: '10px 12px', background: 'rgba(0,0,0,0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div className="kyc-file-details">
                           <FileText size={16} className="kyc-upload-icon" style={{ margin: 0 }} />
                           <div className="kyc-file-info" style={{ textAlign: 'left' }}>
-                            <span className="kyc-file-name" style={{ fontSize: '12px', color: '#ffffff' }}>{inspectedClient.kycDocument.fileName}</span>
-                            <span className="kyc-file-size" style={{ fontSize: '10px', color: '#9c93a8' }}>{inspectedClient.kycDocument.type} • {inspectedClient.kycDocument.fileSize} • {inspectedClient.kycDocument.uploadedAt}</span>
+                            <span className="kyc-file-name" style={{ fontSize: '12px', color: '#ffffff', wordBreak: 'break-all' }}>{inspectedClient.kycDocument.fileName}</span>
+                            <span className="kyc-file-size" style={{ fontSize: '10px', color: '#9c93a8' }}>{inspectedClient.kycDocument.type} • {inspectedClient.kycDocument.uploadedAt}</span>
                           </div>
                         </div>
-                        <button 
-                          onClick={() => {
-                            if (inspectedClient.kycDocument.fileData) {
-                              const newWindow = window.open();
-                              if (newWindow) {
-                                newWindow.document.write(`<iframe src="${inspectedClient.kycDocument.fileData}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button 
+                            onClick={() => {
+                              if (inspectedClient.kycDocument.fileData) {
+                                const newWindow = window.open();
+                                if (newWindow) {
+                                  newWindow.document.write(`<iframe src="${inspectedClient.kycDocument.fileData}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
+                                }
+                              } else {
+                                alert('File data not available for this older upload. Please ask the user to re-upload.');
                               }
-                            } else {
-                              alert('File data not available for this older upload. Please ask the user to re-upload.');
-                            }
-                          }}
-                          style={{ background: 'rgba(217, 175, 86, 0.1)', border: '1px solid rgba(217, 175, 86, 0.3)', color: '#d9af56', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}
-                          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(217, 175, 86, 0.2)'; }}
-                          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(217, 175, 86, 0.1)'; }}
-                        >
-                          View
-                        </button>
+                            }}
+                            style={{ background: 'rgba(217, 175, 86, 0.1)', border: '1px solid rgba(217, 175, 86, 0.3)', color: '#d9af56', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}
+                            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(217, 175, 86, 0.2)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(217, 175, 86, 0.1)'; }}
+                          >
+                            View
+                          </button>
+                          
+                          <button 
+                            onClick={() => {
+                              document.getElementById('admin-kyc-replace-input').click();
+                            }}
+                            style={{ background: 'rgba(168, 85, 247, 0.1)', border: '1px solid rgba(168, 85, 247, 0.3)', color: '#a855f7', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}
+                            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(168, 85, 247, 0.2)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(168, 85, 247, 0.1)'; }}
+                          >
+                            Replace
+                          </button>
+                          
+                          <button 
+                            onClick={async () => {
+                              if (!window.confirm("Are you sure you want to delete this user's KYC document? This will clear it from the database.")) return;
+                              try {
+                                const res = await fetch(`${VITE_BACKEND_URL}/api/admin/kyc/delete`, {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ userId: inspectedClient.id.replace('CUST-', '') })
+                                });
+                                if (!res.ok) throw new Error('Delete failed');
+                                const updated = clients.map(c => {
+                                  if (c.id === inspectedClient.id) {
+                                    return { ...c, kycDocument: null, kycStatus: 'Pending', kycRejectionReason: null };
+                                  }
+                                  return c;
+                                });
+                                setClients(updated);
+                                localStorage.setItem('vb_clients', JSON.stringify(updated));
+                                alert("Document deleted successfully.");
+                              } catch (e) {
+                                alert("Failed to delete document.");
+                              }
+                            }}
+                            style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#ef4444', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}
+                            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'; }}
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </div>
                     </div>
+                  ) : (
+                    <div style={{ marginTop: '8px', borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '10px' }}>
+                      <span style={{ fontSize: '11px', color: '#9c93a8', display: 'block', marginBottom: '6px' }}>No verification document uploaded.</span>
+                      <button 
+                        onClick={() => {
+                          document.getElementById('admin-kyc-replace-input').click();
+                        }}
+                        style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#10b981', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      >
+                        <Plus size={12} /> Upload / Add Document
+                      </button>
+                    </div>
                   )}
+
+                  <input 
+                    type="file" 
+                    id="admin-kyc-replace-input" 
+                    accept="image/*,application/pdf"
+                    style={{ display: 'none' }}
+                    onChange={async (e) => {
+                      const file = e.target.files[0];
+                      if (!file) return;
+                      if (file.size > 5 * 1024 * 1024) {
+                        alert("File size exceeds 5MB limit.");
+                        return;
+                      }
+                      
+                      const reader = new FileReader();
+                      reader.onload = async () => {
+                        try {
+                          const base64Data = reader.result;
+                          const res = await fetch(`${VITE_BACKEND_URL}/api/admin/kyc/replace`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              userId: inspectedClient.id.replace('CUST-', ''),
+                              document: base64Data,
+                              fileName: file.name,
+                              fileType: file.type
+                            })
+                          });
+                          if (!res.ok) throw new Error('Replacement failed');
+                          
+                          const updated = clients.map(c => {
+                            if (c.id === inspectedClient.id) {
+                              return { 
+                                ...c, 
+                                kycStatus: 'Submitted', 
+                                kycDocument: {
+                                  type: file.type,
+                                  fileName: file.name,
+                                  fileSize: 'Uploaded',
+                                  uploadedAt: new Date().toISOString().slice(0, 16).replace('T', ' '),
+                                  fileData: base64Data
+                                },
+                                kycRejectionReason: null
+                              };
+                            }
+                            return c;
+                          });
+                          setClients(updated);
+                          localStorage.setItem('vb_clients', JSON.stringify(updated));
+                          alert("Document uploaded/replaced successfully.");
+                        } catch (err) {
+                          alert("Failed to upload/replace document.");
+                        }
+                      };
+                      reader.readAsDataURL(file);
+                    }}
+                  />
 
                   {inspectedClient.kycStatus === 'Rejected' && inspectedClient.kycRejectionReason && (
                     <div className="kyc-rejection-reason" style={{ marginTop: '4px', padding: '10px' }}>
@@ -2195,8 +2403,8 @@ function App() {
                   {inspectedClient.transactions?.map((tx, idx) => (
                     <div key={`${tx.id}-${idx}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)', padding: '10px 14px', borderRadius: '8px' }}>
                       <div>
-                        <strong style={{ fontSize: '13px', color: tx.type === 'buy' ? '#a855f7' : tx.type === 'sell' ? '#d9af56' : tx.type === 'deposit' ? '#10b981' : '#f43f5e' }}>
-                          {tx.type === 'deposit' ? 'Added Funds' : tx.type === 'withdrawal' ? 'Withdrew Cash' : tx.type === 'buy' ? `Bought ${getAssetLabel(tx.asset)}` : `Sold ${getAssetLabel(tx.asset)}`}
+                        <strong style={{ fontSize: '13px', color: tx.type === 'buy' ? '#a855f7' : tx.type === 'sell' ? '#d9af56' : tx.type === 'deposit' ? '#10b981' : tx.type === 'referral' ? '#38a3fd' : tx.type === 'refund' ? '#10b981' : '#f43f5e' }}>
+                          {tx.type === 'deposit' ? 'Added Funds' : tx.type === 'referral' ? 'Referral Bonus' : tx.type === 'refund' ? 'Refund (Rejected)' : tx.type === 'withdrawal' ? 'Withdrew Cash' : tx.type === 'buy' ? `Bought ${getAssetLabel(tx.asset)}` : `Sold ${getAssetLabel(tx.asset)}`}
                         </strong>
                         <div style={{ fontSize: '11px', color: '#9c93a8', marginTop: '2px' }}>{tx.date} • ID: {tx.id}</div>
                       </div>
@@ -2259,7 +2467,6 @@ function App() {
                     <thead>
                       <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
                         <th style={{ padding: '12px 10px', fontSize: '11px', color: '#9c93a8', textTransform: 'uppercase', fontWeight: 700 }}>Trader</th>
-                        <th style={{ padding: '12px 10px', fontSize: '11px', color: '#9c93a8', textTransform: 'uppercase', fontWeight: 700 }}>Balance</th>
                         <th style={{ padding: '12px 10px', fontSize: '11px', color: '#9c93a8', textTransform: 'uppercase', fontWeight: 700 }}>Trades</th>
                         <th style={{ padding: '12px 10px', fontSize: '11px', color: '#9c93a8', textTransform: 'uppercase', fontWeight: 700 }}>Win Rate</th>
                         <th style={{ padding: '12px 10px', fontSize: '11px', color: '#9c93a8', textTransform: 'uppercase', fontWeight: 700, textAlign: 'right' }}>Actions</th>
@@ -2289,9 +2496,6 @@ function App() {
                                 <div style={{ fontWeight: '700', fontSize: '14px', color: isSelected ? '#f43f5e' : '#ffffff' }}>{p.name}</div>
                                 <div style={{ fontSize: '11.5px', color: '#9c93a8' }}>{p.email}</div>
                               </td>
-                              <td style={{ padding: '14px 10px', fontWeight: '700' }}>
-                                ₹{parseFloat(p.balance).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-                              </td>
                               <td style={{ padding: '14px 10px', color: p.total_trades >= 365 ? '#10b981' : '#f59e0b', fontWeight: 'bold' }}>
                                 {p.total_trades}
                               </td>
@@ -2302,14 +2506,12 @@ function App() {
                                 <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
                                   <button
                                     onClick={() => {
-                                      const bal = prompt("Enter new Balance (INR):", p.balance);
                                       const total = prompt("Enter total Trades completed:", p.total_trades);
                                       const profit = prompt("Enter profitable Trades:", p.profit_trades);
                                       const loss = prompt("Enter losing Trades:", p.loss_trades);
-                                      if (bal !== null && total !== null && profit !== null && loss !== null) {
+                                      if (total !== null && profit !== null && loss !== null) {
                                         const rate = total > 0 ? ((profit / total) * 100).toFixed(2) : '0.00';
                                         handleAdminUpdateContestant(p.email, {
-                                          balance: bal,
                                           totalTrades: total,
                                           profitTrades: profit,
                                           lossTrades: loss,
@@ -2334,7 +2536,7 @@ function App() {
                         })}
                       {contestParticipants.length === 0 && (
                         <tr>
-                          <td colSpan="5" style={{ textAlign: 'center', padding: '40px', color: '#9c93a8' }}>
+                          <td colSpan="4" style={{ textAlign: 'center', padding: '40px', color: '#9c93a8' }}>
                             No contestants registered yet. Use the button above to seed mock tournament data.
                           </td>
                         </tr>
@@ -2358,10 +2560,7 @@ function App() {
                         <span style={{ color: '#9c93a8' }}>Email Address</span>
                         <strong>{selectedContestParticipant.email}</strong>
                       </div>
-                      <div style={{ display: 'flex', justifycontent: 'space-between', fontSize: '13px', justifyContent: 'space-between' }}>
-                        <span style={{ color: '#9c93a8' }}>Contest Balance</span>
-                        <strong style={{ color: '#d9af56' }}>₹{parseFloat(selectedContestParticipant.balance).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
-                      </div>
+
                       <div style={{ display: 'flex', justifycontent: 'space-between', fontSize: '13px', justifyContent: 'space-between' }}>
                         <span style={{ color: '#9c93a8' }}>Win Rate Status</span>
                         <strong style={{ color: '#10b981' }}>{parseFloat(selectedContestParticipant.success_rate).toFixed(1)}%</strong>
@@ -2617,6 +2816,187 @@ function App() {
                     </tbody>
                   </table>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Withdrawal Requests Tab */}
+          {adminTab === 'withdrawals' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', animation: 'fade-in 0.3s ease-out' }}>
+              {/* Header & Refresh */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: '#ffffff' }}>💰 Withdrawal Requests</h2>
+                  <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#9c93a8' }}>Review and approve or reject client payout requests.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={fetchAdminWithdrawals}
+                  disabled={fetchingWithdrawals}
+                  style={{
+                    background: '#1e0b36', border: '1px solid rgba(255,255,255,0.1)', color: '#ffffff',
+                    padding: '10px 18px', borderRadius: '8px', fontWeight: 600, fontSize: '13px',
+                    cursor: fetchingWithdrawals ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '8px',
+                    opacity: fetchingWithdrawals ? 0.6 : 1, transition: 'all 0.2s'
+                  }}
+                >
+                  {fetchingWithdrawals ? '⟳ Refreshing...' : '↻ Refresh'}
+                </button>
+              </div>
+
+              {/* Summary Metrics */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+                {[
+                  { label: 'Pending (Processing)', value: adminWithdrawals.filter(w => w.status === 'processing').length, color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
+                  { label: 'Approved (Successful)', value: adminWithdrawals.filter(w => w.status === 'successful').length, color: '#10b981', bg: 'rgba(16,185,129,0.1)' },
+                  { label: 'Rejected (Failed)', value: adminWithdrawals.filter(w => w.status === 'failed').length, color: '#f43f5e', bg: 'rgba(244,63,94,0.1)' },
+                  { label: 'Total Amount (₹)', value: `₹${adminWithdrawals.reduce((a, w) => a + (w.amount || 0), 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`, color: '#d9af56', bg: 'rgba(217,175,86,0.1)' },
+                ].map((metric, i) => (
+                  <div key={i} style={{ background: '#120524', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '14px', padding: '18px 20px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <div style={{ background: metric.bg, borderRadius: '10px', padding: '10px 14px', fontSize: '20px', fontWeight: 800, color: metric.color }}>
+                      {metric.value}
+                    </div>
+                    <span style={{ fontSize: '12px', color: '#9c93a8', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 700 }}>{metric.label}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Withdrawal Requests Table */}
+              <div style={{ background: '#120524', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '16px', padding: '24px' }}>
+                <h3 style={{ margin: '0 0 18px 0', fontSize: '16px', fontWeight: 800, color: '#ffffff' }}>All Withdrawal Requests</h3>
+                {fetchingWithdrawals ? (
+                  <div style={{ textAlign: 'center', padding: '40px', color: '#9c93a8' }}>Loading withdrawal requests...</div>
+                ) : adminWithdrawals.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '40px', color: '#9c93a8', fontSize: '14px' }}>
+                    No withdrawal requests found. Requests will appear here when clients submit them.
+                  </div>
+                ) : (
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', color: '#9c93a8', fontSize: '11px', textTransform: 'uppercase', fontWeight: 800 }}>
+                          <th style={{ padding: '12px 10px' }}>Client</th>
+                          <th style={{ padding: '12px 10px' }}>Amount</th>
+                          <th style={{ padding: '12px 10px' }}>Method</th>
+                          <th style={{ padding: '12px 10px' }}>Payout ID</th>
+                          <th style={{ padding: '12px 10px' }}>Date</th>
+                          <th style={{ padding: '12px 10px' }}>Status</th>
+                          <th style={{ padding: '12px 10px', textAlign: 'right' }}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {adminWithdrawals.map((wd) => {
+                          const isPending = wd.status === 'processing';
+                          const isSuccess = wd.status === 'successful';
+                          const isFailed = wd.status === 'failed';
+                          const methodLabel = wd.paymentMethod === 'upi_withdrawal' ? 'UPI (Live)' :
+                                             wd.paymentMethod === 'upi_withdrawal_sim' ? 'UPI (Simulated)' :
+                                             wd.paymentMethod === 'bank_withdrawal' ? 'Bank (Live)' :
+                                             wd.paymentMethod === 'bank_withdrawal_sim' ? 'Bank (Simulated)' : wd.paymentMethod;
+                          return (
+                            <tr
+                              key={wd.id}
+                              style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', transition: 'background 0.15s' }}
+                              className="client-directory-row"
+                            >
+                              <td style={{ padding: '14px 10px' }}>
+                                <div style={{ fontWeight: 700, fontSize: '14px', color: '#ffffff' }}>{wd.user?.name || wd.user?.email?.split('@')[0]}</div>
+                                <div style={{ fontSize: '11px', color: '#9c93a8', marginTop: '2px' }}>{wd.user?.email}</div>
+                              </td>
+                              <td style={{ padding: '14px 10px' }}>
+                                <div style={{ fontWeight: 800, fontSize: '16px', color: isPending ? '#f59e0b' : isSuccess ? '#10b981' : '#f43f5e' }}>
+                                  ₹{wd.amount?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                </div>
+                              </td>
+                              <td style={{ padding: '14px 10px' }}>
+                                <span style={{ fontSize: '12px', color: '#d9af56', fontWeight: 600 }}>{methodLabel}</span>
+                              </td>
+                              <td style={{ padding: '14px 10px' }}>
+                                <span style={{ fontSize: '11px', color: '#9c93a8', fontFamily: 'monospace' }}>{wd.orderId}</span>
+                              </td>
+                              <td style={{ padding: '14px 10px' }}>
+                                <span style={{ fontSize: '12px', color: '#9c93a8' }}>
+                                  {new Date(wd.createdAt).toISOString().slice(0, 16).replace('T', ' ')}
+                                </span>
+                              </td>
+                              <td style={{ padding: '14px 10px' }}>
+                                <span style={{
+                                  fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', padding: '4px 8px', borderRadius: '4px',
+                                  background: isPending ? 'rgba(245,158,11,0.15)' : isSuccess ? 'rgba(16,185,129,0.15)' : 'rgba(244,63,94,0.15)',
+                                  color: isPending ? '#f59e0b' : isSuccess ? '#10b981' : '#f43f5e',
+                                  letterSpacing: '0.5px'
+                                }}>
+                                  {isPending ? 'Processing' : isSuccess ? 'Approved' : 'Rejected'}
+                                </span>
+                              </td>
+                              <td style={{ padding: '14px 10px', textAlign: 'right' }}>
+                                {isPending ? (
+                                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                    <button
+                                      type="button"
+                                      onClick={async () => {
+                                        if (!window.confirm(`Approve ₹${wd.amount} withdrawal for ${wd.user?.email}? This marks the payment as successful.`)) return;
+                                        try {
+                                          const res = await fetch(`${VITE_BACKEND_URL}/api/admin/withdrawal/approve`, {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ paymentId: wd.id })
+                                          });
+                                          const data = await res.json();
+                                          if (data.success) {
+                                            setAdminWithdrawals(prev => prev.map(w => w.id === wd.id ? { ...w, status: 'successful' } : w));
+                                            alert(`✅ Withdrawal approved! ₹${wd.amount} payout for ${wd.user?.email} marked as successful.`);
+                                          } else {
+                                            alert(`Failed to approve: ${data.message}`);
+                                          }
+                                        } catch (err) {
+                                          alert(`Error approving withdrawal: ${err.message}`);
+                                        }
+                                      }}
+                                      style={{ padding: '7px 14px', fontSize: '12px', border: '1px solid #10b981', background: 'rgba(16,185,129,0.1)', color: '#10b981', borderRadius: '6px', fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s' }}
+                                    >
+                                      ✓ Approve
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={async () => {
+                                        const reason = window.prompt(`Reject ₹${wd.amount} withdrawal for ${wd.user?.email}?\n\nEnter rejection reason (optional):`) ?? '';
+                                        if (reason === null) return; // user cancelled
+                                        try {
+                                          const res = await fetch(`${VITE_BACKEND_URL}/api/admin/withdrawal/reject`, {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ paymentId: wd.id, rejectReason: reason })
+                                          });
+                                          const data = await res.json();
+                                          if (data.success) {
+                                            setAdminWithdrawals(prev => prev.map(w => w.id === wd.id ? { ...w, status: 'failed' } : w));
+                                            alert(`❌ Withdrawal rejected. ₹${wd.amount} has been refunded to ${wd.user?.email}'s wallet.`);
+                                          } else {
+                                            alert(`Failed to reject: ${data.message}`);
+                                          }
+                                        } catch (err) {
+                                          alert(`Error rejecting withdrawal: ${err.message}`);
+                                        }
+                                      }}
+                                      style={{ padding: '7px 14px', fontSize: '12px', border: '1px solid #f43f5e', background: 'rgba(244,63,94,0.1)', color: '#f43f5e', borderRadius: '6px', fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s' }}
+                                    >
+                                      ✕ Reject
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <span style={{ fontSize: '12px', color: '#9c93a8', fontStyle: 'italic' }}>
+                                    {isSuccess ? 'Payout released' : 'Refund issued'}
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -3013,7 +3393,7 @@ function App() {
                 )}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <LiveChartWidget user={user} />
+                <LiveChartWidget user={user} withdrawableBalance={withdrawableBalance} />
               </div>
             </div>
           )}
@@ -3027,10 +3407,16 @@ function App() {
                       <span className="vault-acc-id">Investhour SECURE WALLET</span>
                       <CreditCard size={20} className="cc-icon" />
                     </div>
-                    <div className="cc-balance-lbl">Available Wallet Cash</div>
-                    <div className="cc-balance-val">{'\u20b9'}{walletBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                    <div className="card-bottom-row">
-                      <span>Vault holder: {user?.email?.split('@')[0].toUpperCase()}</span>
+                    <div className="cc-balance-lbl">Total Wallet Balance</div>
+                    <div className="cc-balance-val">{'₹'}{walletBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                    {successfulReferralsCount > 0 && (
+                      <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', marginTop: '-6px', marginBottom: '6px', display: 'flex', gap: '12px' }}>
+                        <span>Deposited: <span style={{ color: '#10b981', fontWeight: 700 }}>₹{Math.max(0, walletBalance - successfulReferralsCount * 10).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></span>
+                        <span>Referral Bonus: <span style={{ color: '#d9af56', fontWeight: 700 }}>₹{(Math.min(walletBalance, successfulReferralsCount * 10)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></span>
+                      </div>
+                    )}
+                    <div className="card-bottom-row" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                      <span>Withdrawable: ₹{withdrawableBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       <span>STATUS: SECURED</span>
                     </div>
                   </div>
@@ -3048,9 +3434,34 @@ function App() {
                           type="deposit" 
                           onSuccess={(data) => {
                             const val = parseFloat(depositAmount);
-                            setWalletBalance((prev) => parseFloat((prev + val).toFixed(2)));
+                            // Use exact server-returned balance if available, otherwise add to current
+                            if (data.newBalance !== undefined) {
+                              setWalletBalance(parseFloat(data.newBalance.toFixed(2)));
+                            } else {
+                              setWalletBalance((prev) => parseFloat((prev + val).toFixed(2)));
+                            }
                             setTransactions((prev) => [{ id: `TX-${Math.floor(1000 + Math.random() * 9000)}`, type: 'deposit', asset: 'wallet', amount: val, weight: 0, date: new Date().toISOString().slice(0, 16).replace('T', ' '), status: 'Completed' }, ...prev]);
                             setDepositAmount('');
+                            // Re-sync from backend to get latest balance and transactions
+                            setTimeout(() => {
+                              fetch(`${VITE_BACKEND_URL}/api/auth/validate`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ email: user.email })
+                              }).then(r => r.json()).then(syncData => {
+                                if (syncData.valid) {
+                                  if (syncData.walletBalance !== undefined) setWalletBalance(syncData.walletBalance);
+                                  if (syncData.transactions !== undefined) {
+                                    setTransactions(syncData.transactions.map(t => ({
+                                      id: 'TX-' + t.id,
+                                      type: t.type?.toLowerCase() === 'deposit' ? 'deposit' : t.type?.toLowerCase() === 'referral' ? 'referral' : t.type?.toLowerCase() === 'refund' ? 'refund' : 'withdrawal',
+                                      asset: t.asset || 'wallet', amount: t.amount, status: 'Completed',
+                                      date: new Date(t.createdAt).toISOString().slice(0, 16).replace('T', ' ')
+                                    })));
+                                  }
+                                }
+                              }).catch(() => {});
+                            }, 500);
                           }}
                         />
                       </div>
@@ -3070,27 +3481,32 @@ function App() {
                 <div className="complete-vault-ledger">
                   <h3>Full Transaction History</h3>
                   <div className="full-ledger-scrollable">
-                    {transactions.map((tx) => (
+                    {transactions.filter(tx => tx.type !== 'referral').map((tx) => (
                       <div key={tx.id} className="ledger-card-item">
                         <div className="ledger-item-left">
-                          <div className={`ledger-type-circle ${tx.type}`}>
-                            {tx.type === 'deposit' ? <ArrowDownLeft size={16} /> : tx.type === 'withdrawal' ? <ArrowUpRight size={16} /> : <ArrowRightLeft size={16} />}
+                          <div className={`ledger-type-circle ${tx.type === 'refund' ? 'deposit' : tx.type}`}>
+                            {tx.type === 'deposit' || tx.type === 'refund' ? <ArrowDownLeft size={16} /> : tx.type === 'withdrawal' ? <ArrowUpRight size={16} /> : <ArrowRightLeft size={16} />}
                           </div>
                           <div>
                             <div className="ledger-item-title">
-                              {tx.type === 'deposit' ? 'Added Funds' : tx.type === 'withdrawal' ? 'Withdrew Cash' : tx.type === 'buy' ? `Purchased ${getAssetLabel(tx.asset)}` : `Sold ${getAssetLabel(tx.asset)}`}
+                              {tx.type === 'deposit' ? 'Added Funds' : tx.type === 'refund' ? 'Refund (Rejected)' : tx.type === 'withdrawal' ? 'Withdrew Cash' : tx.type === 'buy' ? `Purchased ${getAssetLabel(tx.asset)}` : `Sold ${getAssetLabel(tx.asset)}`}
                             </div>
                             <div className="ledger-item-date">{tx.date} {'\u2022'} ID: {tx.id}</div>
                           </div>
                         </div>
                         <div className="ledger-item-right">
-                          <div className={`ledger-item-amount ${tx.type}`}>{tx.type === 'buy' || tx.type === 'withdrawal' ? '-' : '+'}{'\u20b9'}{tx.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                          <div className={`ledger-item-amount ${tx.type === 'refund' ? 'deposit' : tx.type}`}>{tx.type === 'buy' || tx.type === 'withdrawal' ? '-' : '+'}{'\u20b9'}{tx.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
                           {tx.weight > 0 && <div className="ledger-item-weight">{tx.weight.toFixed(4)} g</div>}
                         </div>
                       </div>
                     ))}
+                    {transactions.filter(tx => tx.type !== 'referral').length === 0 && (
+                      <div style={{ textAlign: 'center', padding: '30px 0', color: 'rgba(255,255,255,0.3)', fontSize: '13px' }}>No transactions yet.</div>
+                    )}
                   </div>
                 </div>
+
+
               </div>
             </div>
           )}
@@ -3356,7 +3772,7 @@ function App() {
                   </div>
                   <h2>Invite & Accumulate Gold</h2>
                   <p>
-                    Accumulate real wealth together. Get <strong>₹10 worth of Gold</strong> credited instantly to your vault for every friend who registers and verifies their account. 
+                    Accumulate real wealth together. Get <strong>Gold bonus</strong> credited instantly to your vault for every friend who registers and verifies their account. 
                     <br />
                     <span className="milestone-highlight">Milestone Reward: Refer 1,500 successful friends to claim <strong>1 Gram of Physical Gold</strong> delivered to your doorstep!</span>
                   </p>
@@ -3367,18 +3783,9 @@ function App() {
                 <div className="referral-stats-card">
                   <h3>Your Referral Progress</h3>
                   <div className="referral-stats-container">
-                    <div className="referral-stat-box">
+                    <div className="referral-stat-box" style={{ width: '100%' }}>
                       <span className="stat-label">Successful Invites</span>
                       <strong className="stat-val">{successfulReferralsCount} <span className="stat-max">/ 1,500</span></strong>
-                    </div>
-                    <div className="referral-stat-box">
-                      <span className="stat-label">Gold Earned (Est.)</span>
-                      <strong className="stat-val gold-text">
-                        ₹{(successfulReferralsCount * 10).toLocaleString('en-IN')}
-                        <span className="stat-sub">
-                          ({((successfulReferralsCount * 10) / rates.gold.price).toFixed(4)} g)
-                        </span>
-                      </strong>
                     </div>
                   </div>
 
@@ -3436,7 +3843,7 @@ function App() {
                     </div>
                     <div className="ref-step">
                       <span className="step-num">3</span>
-                      <span className="step-txt">₹10 Gold goes to your vault!</span>
+                      <span className="step-txt">Gold goes to your vault!</span>
                     </div>
                   </div>
                 </div>
@@ -3541,8 +3948,8 @@ function App() {
                       alert('Minimum withdrawal is ₹500.');
                       return;
                     }
-                    if (walletBalance < val) {
-                      alert('Insufficient balance in your secure wallet.');
+                    if (withdrawableBalance < val) {
+                      alert(`Insufficient withdrawable balance. Your withdrawable balance is ₹${withdrawableBalance.toFixed(2)}.`);
                       return;
                     }
                     setWalletBalance((prev) => parseFloat((prev - val).toFixed(2)));
@@ -3551,10 +3958,12 @@ function App() {
                     setShowWithdrawModal(false);
                   }}
                   onError={(err) => {
-                    if (err?.response?.data?.error === 'Insufficient wallet balance' || walletBalance < parseFloat(withdrawAmount)) {
-                       alert('Insufficient balance in your secure wallet.');
+                    if (err?.response?.data?.error) {
+                      alert(err.response.data.error);
+                    } else if (withdrawableBalance < parseFloat(withdrawAmount)) {
+                      alert(`Insufficient withdrawable balance. Your withdrawable balance is ₹${withdrawableBalance.toFixed(2)}.`);
                     } else if (parseFloat(withdrawAmount) < 500) {
-                       alert('Minimum withdrawal is ₹500.');
+                      alert('Minimum withdrawal is ₹500.');
                     }
                   }}
                 />
@@ -3791,7 +4200,7 @@ function App() {
               </form>
             ) : authTab === 'login' ? (
               <form className="auth-form" onSubmit={handleSignInStart}>
-                <div className="auth-form-header"><h2>Welcome Back</h2><p>Access your precious metal vault securely</p></div>
+                <div className="auth-form-header"><h2>Welcome Back</h2><p>Access your precious meta vault securely</p></div>
                 <div className="auth-input-group">
                   <label>Email or Mobile Number</label>
                   <input type="text" required placeholder="Enter email or mobile" value={authForm.email || ''} onChange={(e) => setAuthForm({ ...authForm, email: e.target.value })} />
@@ -4124,7 +4533,7 @@ function App() {
                       alert('Minimum withdrawal is ₹500.');
                       return;
                     }
-                    if (walletBalance < val) {
+                    if (withdrawableBalance < val) {
                       alert('Insufficient balance in your secure wallet.');
                       return;
                     }
@@ -4134,7 +4543,7 @@ function App() {
                     setShowWithdrawModal(false);
                   }}
                   onError={(err) => {
-                    if (err?.response?.data?.error === 'Insufficient wallet balance' || walletBalance < parseFloat(withdrawAmount)) {
+                    if (err?.response?.data?.error === 'Insufficient wallet balance' || withdrawableBalance < parseFloat(withdrawAmount)) {
                        alert('Insufficient balance in your secure wallet.');
                     } else if (parseFloat(withdrawAmount) < 500) {
                        alert('Minimum withdrawal is ₹500.');

@@ -391,7 +391,7 @@
                 </div>
               ) : (
                 <form className="auth-form" onSubmit={handleSignInStart}>
-                  <div className="auth-form-header"><h2>Welcome Back</h2><p>Access your precious metal vault securely</p></div>
+                  <div className="auth-form-header"><h2>Welcome Back</h2><p>Access your precious meta vault securely</p></div>
                   <div className="auth-input-group">
                     <label>Email or Mobile Number</label>
                     <input type="text" required placeholder="Enter email or mobile" value={authForm.email || ''} onChange={(e) => setAuthForm({ ...authForm, email: e.target.value })} />
@@ -426,7 +426,7 @@
                   <label>Vault Password</label>
                   <input type="password" required placeholder="Create secure password" value={authForm.password || ''} onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })} />
                 </div>
-                <label className="auth-checkbox agreement"><input type="checkbox" required /> I agree to the physical metal vaulting terms and conditions</label>
+                <label className="auth-checkbox agreement"><input type="checkbox" required /> I agree to the physical meta vaulting terms and conditions</label>
                 <button type="submit" className="btn-auth-submit">Generate Account Securely</button>
               </form>
             )}
