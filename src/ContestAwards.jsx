@@ -371,19 +371,19 @@ const ContestAwards = ({ user, rates, walletBalance, onTradeRedirect }) => {
                       
                       return (
                         <tr key={trade.id}>
-                          <td style={{ fontWeight: 700 }}>{trade.symbol}</td>
-                          <td>
+                          <td data-label="Asset" style={{ fontWeight: 700 }}>{trade.symbol}</td>
+                          <td data-label="Type">
                             <span style={{ color: trade.type === 'BUY' ? '#10b981' : '#f43f5e', fontWeight: 600, fontSize: '11px' }}>
                               {trade.type}
                             </span>
                           </td>
-                          <td>₹{parseFloat(trade.price).toFixed(2)}</td>
-                          <td>₹{parseFloat(trade.entry_amount).toLocaleString()}</td>
-                          <td>{trade.close_price ? `₹${parseFloat(trade.close_price).toFixed(2)}` : '-'}</td>
-                          <td style={{ color: isWin ? '#10b981' : (isLoss ? '#ef4444' : '#ffffff'), fontWeight: 700 }}>
+                          <td data-label="Entry Price">₹{parseFloat(trade.price).toFixed(2)}</td>
+                          <td data-label="Risk Amount">₹{parseFloat(trade.entry_amount).toLocaleString()}</td>
+                          <td data-label="Close Price">{trade.close_price ? `₹${parseFloat(trade.close_price).toFixed(2)}` : '-'}</td>
+                          <td data-label="P&L" style={{ color: isWin ? '#10b981' : (isLoss ? '#ef4444' : '#ffffff'), fontWeight: 700 }}>
                             {isWin ? '+' : ''}{trade.status !== 'OPEN' ? `₹${parseFloat(trade.pnl).toLocaleString()}` : '-'}
                           </td>
-                          <td>
+                          <td data-label="Status">
                             <span className={`status-text ${trade.status.toLowerCase()}`}>
                               {trade.status}
                             </span>

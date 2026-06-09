@@ -551,10 +551,7 @@
     padding: 16px !important;
   }
   
-  /* Enable clean horizontal scroll instead of squeezing/hiding columns */
-  .contest-trades-panel .ledger-table {
-    min-width: 680px;
-  }
+  /* Enable clean horizontal scroll for leaderboard table */
   .leaderboard-table {
     min-width: 500px;
   }
@@ -579,6 +576,65 @@
     align-items: flex-start !important;
     gap: 8px !important;
   }
+
+  /* Convert Contest Trades Table to Premium Stacking Cards */
+  .contest-trades-panel .ledger-table,
+  .contest-trades-panel .ledger-table tbody,
+  .contest-trades-panel .ledger-table tr,
+  .contest-trades-panel .ledger-table td {
+    display: block !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .contest-trades-panel .ledger-table thead {
+    display: none !important;
+  }
+
+  .contest-trades-panel .ledger-table tr {
+    background: rgba(255, 255, 255, 0.02) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    border-radius: 12px !important;
+    margin-bottom: 16px !important;
+    padding: 12px 16px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+  }
+
+  .contest-trades-panel .ledger-table td {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    border: none !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+    padding: 10px 0 !important;
+    font-size: 13.5px !important;
+    text-align: right !important;
+  }
+
+  .contest-trades-panel .ledger-table td:last-child {
+    border-bottom: none !important;
+  }
+
+  .contest-trades-panel .ledger-table td::before {
+    content: attr(data-label) !important;
+    font-weight: 700 !important;
+    color: #9c93a8 !important;
+    font-size: 12.5px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+  }
+
+  /* Keep empty ledger display centered */
+  .contest-trades-panel .ledger-table td[colSpan="7"] {
+    display: block !important;
+    text-align: center !important;
+    padding: 30px 0 !important;
+    justify-content: center !important;
+  }
+  
+  .contest-trades-panel .ledger-table td[colSpan="7"]::before {
+    display: none !important;
+  }
 }
 
 @media (max-width: 480px) {
@@ -598,11 +654,6 @@
     width: 100% !important;
     justify-content: center !important;
     padding: 10px !important;
-  }
-  .contest-trades-panel .ledger-table th, 
-  .contest-trades-panel .ledger-table td {
-    padding: 8px 6px !important;
-    font-size: 12px !important;
   }
 }
 
