@@ -422,3 +422,191 @@
   color: #9c93a8;
   font-weight: 700;
 }
+
+/* Hero Meta Styling */
+.contest-hero-meta {
+  display: flex;
+  gap: 15px;
+  margin-top: 15px;
+  align-items: center;
+}
+
+.plan-badge {
+  font-size: 12px;
+  background: rgba(217, 175, 86, 0.1);
+  color: #d9af56;
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(217, 175, 86, 0.2);
+  font-weight: 600;
+}
+
+.registered-date {
+  font-size: 12.5px;
+  color: #9c93a8;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Progress Footer status text container */
+.progress-status-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  margin-top: 20px;
+  padding-top: 15px;
+  gap: 15px;
+}
+
+.status-text-left {
+  font-size: 13px;
+  color: #9c93a8;
+}
+
+.status-text-right {
+  font-size: 13px;
+  color: #d9af56;
+  font-weight: bold;
+}
+
+/* Leaderboard header */
+.leaderboard-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.live-dot-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #10b981;
+}
+
+.live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 6px #10b981;
+}
+
+/* Trades header & button */
+.trades-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  gap: 12px;
+}
+
+.btn-place-contest-trade {
+  background: rgba(168, 85, 247, 0.1);
+  color: #a855f7;
+  border: 1px solid rgba(168, 85, 247, 0.2);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+
+.btn-place-contest-trade:hover {
+  background: rgba(168, 85, 247, 0.2);
+}
+
+/* Responsive adjustments for Contest Dashboard Page */
+@media (max-width: 768px) {
+  .contest-hero-card {
+    padding: 20px !important;
+    gap: 16px !important;
+  }
+  .contest-hero-info h2 {
+    font-size: 20px !important;
+  }
+  .contest-stat-box {
+    padding: 16px !important;
+  }
+  .contest-stat-value {
+    font-size: 20px !important;
+  }
+  .contest-progress-section {
+    padding: 16px !important;
+  }
+  .progress-title {
+    font-size: 13px !important;
+  }
+  .progress-pct {
+    font-size: 12.5px !important;
+  }
+  .leaderboard-panel, .contest-trades-panel {
+    padding: 16px !important;
+  }
+}
+
+@media (max-width: 600px) {
+  .contest-hero-meta {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+  }
+  .milestone-detail {
+    display: none !important;
+  }
+  .progress-status-footer {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+  }
+  .leaderboard-header-row {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .milestone-mid {
+    display: none !important;
+  }
+  .leaderboard-table th:nth-child(3),
+  .leaderboard-table td:nth-child(3) {
+    display: none !important;
+  }
+  .leaderboard-table th, .leaderboard-table td {
+    padding: 8px 6px !important;
+    font-size: 12px !important;
+  }
+  .trades-panel-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+  .btn-place-contest-trade {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 10px !important;
+  }
+  .contest-trades-panel .ledger-table th:nth-child(4),
+  .contest-trades-panel .ledger-table td:nth-child(4),
+  .contest-trades-panel .ledger-table th:nth-child(7),
+  .contest-trades-panel .ledger-table td:nth-child(7),
+  .contest-trades-panel .ledger-table th:nth-child(5),
+  .contest-trades-panel .ledger-table td:nth-child(5) {
+    display: none !important;
+  }
+  .contest-trades-panel .ledger-table th, 
+  .contest-trades-panel .ledger-table td {
+    padding: 8px 6px !important;
+    font-size: 12px !important;
+  }
+}
+

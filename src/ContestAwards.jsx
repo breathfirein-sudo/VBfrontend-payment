@@ -222,11 +222,11 @@ const ContestAwards = ({ user, rates, walletBalance, onTradeRedirect }) => {
             <div className="contest-hero-info">
               <h2>Your Contest Account Overview</h2>
               <p>Your performance calculations, eligibility status, and paper trading wallet metrics are updated below in real time.</p>
-              <div style={{ display: 'flex', gap: '15px', marginTop: '15px', alignItems: 'center' }}>
-                <span style={{ fontSize: '12px', background: 'rgba(217, 175, 86, 0.1)', color: '#d9af56', padding: '6px 12px', borderRadius: '20px', border: '1px solid rgba(217, 175, 86, 0.2)', fontWeight: 600 }}>
+              <div className="contest-hero-meta">
+                <span className="plan-badge">
                   Active Plan: Standard
                 </span>
-                <span style={{ fontSize: '12.5px', color: '#9c93a8', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span className="registered-date">
                   <Clock size={14} /> Registered: {profile?.registered_at ? new Date(profile.registered_at).toLocaleDateString() : ''}
                 </span>
               </div>
@@ -267,22 +267,22 @@ const ContestAwards = ({ user, rates, walletBalance, onTradeRedirect }) => {
             </div>
 
             <div className="progress-milestones">
-              <span>0 Trades (Start)</span>
-              <span>100 Trades</span>
-              <span>200 Trades</span>
-              <span>300 Trades</span>
-              <span>365 Trades (Qualification Line)</span>
+              <span>0 <span className="milestone-detail">Trades (Start)</span></span>
+              <span className="milestone-mid">100 <span className="milestone-detail">Trades</span></span>
+              <span className="milestone-mid">200 <span className="milestone-detail">Trades</span></span>
+              <span className="milestone-mid">300 <span className="milestone-detail">Trades</span></span>
+              <span>365 <span className="milestone-detail">Trades (Qualification Line)</span></span>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: '20px', paddingTop: '15px' }}>
-              <div style={{ fontSize: '13px', color: '#9c93a8' }}>
+            <div className="progress-status-footer">
+              <div className="status-text-left">
                 <strong>Current Status:</strong> {(profile?.total_trades || 0) < 365 ? (
                   <span style={{ color: '#f59e0b', fontWeight: 'bold' }}>Needs {365 - (profile?.total_trades || 0)} more trades to qualify</span>
                 ) : (
                   <span style={{ color: '#10b981', fontWeight: 'bold' }}>Trades Requirement Met! Qualified for Prizes</span>
                 )}
               </div>
-              <div style={{ fontSize: '13px', color: '#d9af56', fontWeight: 'bold' }}>
+              <div className="status-text-right">
                 Projected Reward: {getQualifyingPrize(parseFloat(profile?.success_rate || 0), profile?.total_trades || 0)}
               </div>
             </div>
@@ -293,10 +293,10 @@ const ContestAwards = ({ user, rates, walletBalance, onTradeRedirect }) => {
             
             {/* Leaderboard Panel */}
             <div className="leaderboard-panel">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div className="leaderboard-header-row">
                 <h3 style={{ fontSize: '16px', fontWeight: '800', margin: 0 }}>Tournament Leaderboard</h3>
-                <span className="live-dot-indicator" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#10b981' }}>
-                  <span className="live-dot" style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981', boxShadow: '0 0 6px #10b981' }}></span> Live Rates
+                <span className="live-dot-indicator">
+                  <span className="live-dot"></span> Live Rates
                 </span>
               </div>
               
@@ -340,12 +340,12 @@ const ContestAwards = ({ user, rates, walletBalance, onTradeRedirect }) => {
 
             {/* User Trade log panel */}
             <div className="contest-trades-panel">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div className="trades-panel-header">
                 <h3 style={{ fontSize: '16px', fontWeight: '800', margin: 0 }}>Your Contest Trades</h3>
                 <button 
                   type="button" 
                   onClick={onTradeRedirect}
-                  style={{ background: 'rgba(168, 85, 247, 0.1)', color: '#a855f7', border: '1px solid rgba(168,85,247,0.2)', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  className="btn-place-contest-trade"
                 >
                   Place Contest Trade <ArrowRight size={14} />
                 </button>
