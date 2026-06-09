@@ -703,3 +703,23 @@
   color: #ffffff !important;
 }
 
+@media (max-width: 1024px) {
+  .lc-widget-body {
+    flex-direction: column;
+  }
+  .lc-chart-side {
+    flex: none;
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+  .lc-portfolio-panel {
+    flex: none;
+    max-width: none;
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    box-sizing: border-box;
+  }
+}
+

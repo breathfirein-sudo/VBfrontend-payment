@@ -2892,6 +2892,10 @@
 }
 
 @media (max-width: 768px) {
+  .section-title {
+    font-size: 22px !important;
+    margin-bottom: 24px !important;
+  }
   .portfolio-value-card {
     padding: 24px;
     border-radius: 20px;
@@ -2926,6 +2930,31 @@
 @media (max-width: 640px) {
   .holdings-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .val-card-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 0 16px !important;
+  }
+  .portfolio-value-card {
+    padding: 16px !important;
+  }
+  .credit-card-wallet {
+    padding: 16px !important;
+  }
+  .credit-card-wallet .card-bottom-row {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
   }
 }
 
@@ -3482,5 +3511,451 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 12px;
+  }
+}
+
+/* ==========================================
+   MOBILE HAMBURGER MENU & DROPDOWN
+   ========================================== */
+.hamburger-btn {
+  display: none;
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  padding: 8px;
+  z-index: 1001;
+  transition: transform 0.2s;
+}
+
+.hamburger-btn:hover {
+  transform: scale(1.05);
+}
+
+.hamburger-btn:active {
+  transform: scale(0.95);
+}
+
+@media (max-width: 1024px) {
+  .hamburger-btn {
+    display: block;
+  }
+
+  .nav-container {
+    position: relative;
+  }
+
+  /* Make nav menu collapse into drop down on mobile/tablet */
+  .nav-menu, .nav-menu.dashboard-nav {
+    display: none !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    position: absolute;
+    top: 80px;
+    left: 0;
+    right: 0;
+    background: rgba(13, 6, 23, 0.98);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 20px !important;
+    gap: 12px !important;
+    z-index: 1000;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+    margin: 0 !important;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Override mobile bottom nav settings for dashboard nav on desktop headers */
+  header .nav-menu.dashboard-nav {
+    display: none !important;
+  }
+  
+  header .nav-menu.mobile-open,
+  header .nav-menu.dashboard-nav.mobile-open {
+    display: flex !important;
+  }
+
+  .nav-item, .dash-nav-item {
+    width: 100% !important;
+    padding: 12px 16px !important;
+    border-radius: 8px !important;
+    justify-content: flex-start !important;
+    align-items: center !important;
+    background: rgba(255, 255, 255, 0.02) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    box-sizing: border-box;
+    font-size: 14px !important;
+    color: #ffffff !important;
+    flex-direction: row !important;
+    min-width: 100% !important;
+    opacity: 1 !important;
+  }
+
+  .nav-item:hover, .dash-nav-item:hover {
+    background: rgba(217, 175, 86, 0.1) !important;
+    border-color: rgba(217, 175, 86, 0.3) !important;
+  }
+  
+  .nav-item.active, .dash-nav-item.active {
+    color: var(--color-gold) !important;
+    background: rgba(217, 175, 86, 0.08) !important;
+    border-color: var(--color-gold) !important;
+  }
+  
+  .nav-item::after, .dash-nav-item::after {
+    display: none !important;
+  }
+  
+  /* Make user info display nicely inside header context */
+  .dash-user-badge {
+    margin-left: auto;
+    margin-right: 12px;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Re-enable bottom nav spacing and hide top header nav dashboard layout strictly */
+  .dashboard-shell {
+    padding-bottom: 90px !important;
+  }
+  
+  /* Keep top header dashboard nav hidden on small mobile screen because they have the bottom bar! */
+  header .nav-menu.dashboard-nav {
+    display: none !important;
+  }
+  
+  /* Public header nav menu (for non-logged in or other views) still needs to work on mobile */
+  header .nav-menu:not(.dashboard-nav).mobile-open {
+    display: flex !important;
+  }
+  
+  .dash-user-badge {
+    display: flex !important;
+  }
+}
+
+/* Ticker bar horizontal touch scroll on mobile/tablet */
+@media (max-width: 1024px) {
+  .ticker-bar {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none; /* Hide scrollbar for clean premium look */
+  }
+  .ticker-bar::-webkit-scrollbar {
+    display: none;
+  }
+  .ticker-track {
+    animation: none !important;
+    padding: 0 16px;
+    width: max-content;
+  }
+}
+
+/* --- Trade Page Layout --- */
+.trade-view-layout {
+  display: flex;
+  gap: 24px;
+}
+
+.trade-disclaimer-card {
+  width: 280px;
+  flex-shrink: 0;
+  background: #1c0d2b;
+  border: 1px solid rgba(217, 175, 86, 0.25);
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: fit-content;
+  box-sizing: border-box;
+}
+
+.trade-chart-container {
+  flex-grow: 1;
+  min-width: 0;
+}
+
+/* --- Modal Input Row --- */
+.modal-input-row {
+  display: flex;
+  gap: 16px;
+}
+
+/* --- Responsive Layout Rules --- */
+@media (max-width: 1024px) {
+  .trade-view-layout {
+    flex-direction: column;
+    gap: 16px;
+  }
+  .trade-disclaimer-card {
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .profile-settings-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .modal-input-row {
+    flex-direction: column;
+    gap: 16px;
+  }
+}
+
+/* --- Mobile Hamburger Dropdown Overflow & Height Fix --- */
+@media (max-width: 768px) {
+  header .nav-menu.dashboard-nav.mobile-open {
+    display: flex !important;
+    position: absolute !important;
+    top: 80px !important;
+    bottom: auto !important;
+    height: auto !important;
+    overflow-y: visible !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    background: rgba(13, 6, 23, 0.98) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+    padding: 20px !important;
+    gap: 12px !important;
+    z-index: 1000 !important;
+  }
+
+  header .nav-menu.dashboard-nav.mobile-open .dash-nav-item {
+    width: 100% !important;
+    min-width: 100% !important;
+    padding: 12px 16px !important;
+    border-radius: 8px !important;
+    justify-content: flex-start !important;
+    align-items: center !important;
+    background: rgba(255, 255, 255, 0.02) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    box-sizing: border-box !important;
+    font-size: 14px !important;
+    color: #ffffff !important;
+    flex-direction: row !important;
+    opacity: 1 !important;
+  }
+
+  header .nav-menu.dashboard-nav.mobile-open .dash-nav-item.active {
+    color: var(--color-gold) !important;
+    background: rgba(217, 175, 86, 0.08) !important;
+    border-color: var(--color-gold) !important;
+  }
+}
+
+/* --- Mobile/Tablet Header User Badge Repositioning --- */
+.mobile-user-badge {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  .dash-user-badge {
+    display: none !important;
+  }
+
+  header .nav-menu.mobile-open .mobile-user-badge,
+  header .nav-menu.dashboard-nav.mobile-open .mobile-user-badge {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    margin-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    background-color: rgba(255, 255, 255, 0.02);
+    border-radius: 8px;
+  }
+
+  .mobile-user-badge .user-info-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    text-align: left;
+  }
+
+  .mobile-user-badge .user-email-text {
+    font-size: 13px;
+    color: #ffffff;
+    word-break: break-all;
+    font-weight: 600;
+  }
+
+  .mobile-user-badge .kyc-badge {
+    font-size: 10px;
+    color: var(--color-gold);
+    font-weight: 700;
+    align-self: flex-start;
+  }
+
+  .mobile-user-badge .btn-sec-signout {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    background-color: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    transition: all 0.2s;
+  }
+
+  .mobile-user-badge .btn-sec-signout:hover {
+    background-color: #ef4444;
+    color: #ffffff;
+  }
+}
+
+/* --- Portfolio Page Responsiveness & Styling Enhancements --- */
+@media (max-width: 768px) {
+  .portfolio-hero-grid {
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .portfolio-value-card, .portfolio-allocation-card {
+    padding: 20px !important;
+    border-radius: 16px !important;
+  }
+  .total-valuation-display {
+    font-size: 32px !important;
+    margin: 12px 0 8px !important;
+  }
+  .holding-card {
+    padding: 16px !important;
+    min-height: 160px !important;
+  }
+  .holding-weight {
+    font-size: 22px !important;
+  }
+  .holding-value {
+    font-size: 16px !important;
+  }
+  .activity-ledger-section {
+    padding: 16px !important;
+    border-radius: 16px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .portfolio-hero-grid {
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .portfolio-value-card, .portfolio-allocation-card {
+    padding: 14px !important;
+    border-radius: 12px !important;
+  }
+  .total-valuation-display {
+    font-size: 26px !important;
+    margin: 10px 0 6px !important;
+  }
+  .valuation-trend-row {
+    font-size: 11.5px !important;
+    gap: 6px !important;
+  }
+  .cash-indicator {
+    margin-top: 12px !important;
+    font-size: 11.5px !important;
+  }
+  .portfolio-allocation-card h3 {
+    margin-bottom: 12px !important;
+  }
+  .alloc-legend-grid {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+  .legend-item {
+    font-size: 12px !important;
+  }
+  .holding-card {
+    padding: 14px !important;
+    min-height: 145px !important;
+    border-radius: 12px !important;
+  }
+  .holding-weight {
+    font-size: 20px !important;
+  }
+  .holding-value {
+    font-size: 15px !important;
+  }
+  .live-pricing-indicator {
+    font-size: 11.5px !important;
+  }
+  .btn-card-action {
+    padding: 6px 12px !important;
+    font-size: 12px !important;
+  }
+  .activity-ledger-section {
+    padding: 12px !important;
+    border-radius: 12px !important;
+  }
+  .ledger-header {
+    margin-bottom: 12px !important;
+  }
+  .ledger-header h3 {
+    font-size: 14px !important;
+  }
+  .ledger-table th, .ledger-table td {
+    padding: 8px 10px !important;
+    font-size: 11px !important;
+  }
+}
+
+/* Custom mobile overrides for Portfolio and Referral Tab in Dashboard */
+@media (max-width: 1024px) {
+  .referral-details-grid {
+    grid-template-columns: 1fr !important;
+    gap: 20px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .tx-id-col,
+  .ledger-table th:nth-child(1) {
+    display: none !important;
+  }
+}
+
+@media (max-width: 600px) {
+  .ledger-table th:nth-child(4),
+  .ledger-table td:nth-child(4), /* Weight */
+  .ledger-table th:nth-child(7),
+  .ledger-table td:nth-child(7) /* Status */ {
+    display: none !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .referral-stats-container {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+  .referral-link-wrapper {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    padding: 12px !important;
+    gap: 12px !important;
+  }
+  .referral-link-input {
+    text-align: center;
+    font-size: 12px !important;
+    width: 100% !important;
+  }
+  .btn-copy-link {
+    justify-content: center !important;
+    width: 100% !important;
+  }
+  .tx-date-col,
+  .ledger-table th:nth-child(6) {
+    display: none !important;
   }
 }

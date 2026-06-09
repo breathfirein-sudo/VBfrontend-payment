@@ -1051,15 +1051,15 @@
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;
   }
-  .element-card {
+  .metal-grid-card {
     padding: 12px;
     border-radius: 16px;
     min-height: 120px;
   }
-  .element-symbol {
+  .card-symbol {
     font-size: 28px;
   }
-  .element-name {
+  .card-name {
     font-size: 13px;
   }
   .highlights-grid {

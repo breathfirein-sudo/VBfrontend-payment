@@ -510,5 +510,70 @@
   }
   .offer-divider {
     transform: rotate(90deg);
+    margin: 10px 0;
   }
 }
+
+@media (max-width: 600px) {
+  .security-banner-content {
+    flex-direction: column !important;
+    text-align: center !important;
+    gap: 16px !important;
+  }
+  .sec-shield-icon {
+    margin: 0 auto !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .referral-page-content {
+    padding: 24px 12px !important;
+    gap: 36px !important;
+  }
+  .referral-page-hero {
+    padding: 40px 16px !important;
+  }
+  .referral-page-hero h1 {
+    font-size: 24px !important;
+  }
+  .hero-subtext {
+    font-size: 13.5px !important;
+  }
+  .offer-box {
+    padding: 16px 20px !important;
+  }
+  .offer-value {
+    font-size: 22px !important;
+  }
+  .offer-title {
+    font-size: 11px !important;
+  }
+  .btn-referral-cta {
+    padding: 12px 24px !important;
+    font-size: 13.5px !important;
+    width: 100% !important;
+    justify-content: center !important;
+  }
+  .calculator-container {
+    padding: 20px 16px !important;
+  }
+  .calculator-header h2 {
+    font-size: 20px !important;
+  }
+  .calc-slider-side {
+    padding: 16px !important;
+  }
+  .reward-val-highlight {
+    font-size: 20px !important;
+  }
+  .faq-item-card {
+    padding: 16px !important;
+  }
+  .faq-question-header h3 {
+    font-size: 13.5px !important;
+  }
+  .referral-security-banner {
+    padding: 20px 16px !important;
+  }
+}
+

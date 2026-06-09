@@ -39,7 +39,8 @@ import {
   Loader2,
   AlertTriangle,
   Eye,
-  EyeOff
+  EyeOff,
+  Menu
 } from 'lucide-react';
 import heroGoldOre from './assets/hero_gold_ore.png';
 import './App.css';
@@ -154,6 +155,7 @@ const IntervalDropdown = ({ value, onChange }) => {
 };
 
 function App() {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const getAuthToken = async () => {
     let token = localStorage.getItem('vb_jwt_token');
     if (!token && auth && auth.currentUser) {
@@ -3108,49 +3110,69 @@ function App() {
               <InvesthourLogoText />
             </div>
             
-            <nav className="nav-menu dashboard-nav">
+            <button 
+              type="button" 
+              className="hamburger-btn" 
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              aria-label="Toggle Menu"
+            >
+              {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
+            
+            <nav className={`nav-menu dashboard-nav ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
               <button 
                 className={`dash-nav-item ${dashTab === 'portfolio' ? 'active' : ''}`}
-                onClick={() => setDashTab('portfolio')}
+                onClick={() => { setDashTab('portfolio'); setIsMobileMenuOpen(false); }}
               >
                 <Briefcase size={16} /> Portfolio
               </button>
               <button 
                 className={`dash-nav-item ${dashTab === 'trade' ? 'active' : ''}`}
-                onClick={() => setDashTab('trade')}
+                onClick={() => { setDashTab('trade'); setIsMobileMenuOpen(false); }}
               >
                 <ArrowRightLeft size={16} /> Trade
               </button>
               <button 
                 className={`dash-nav-item ${dashTab === 'wallet' ? 'active' : ''}`}
-                onClick={() => setDashTab('wallet')}
+                onClick={() => { setDashTab('wallet'); setIsMobileMenuOpen(false); }}
               >
                 <Wallet size={16} /> Wallet
               </button>
               <button 
                 className={`dash-nav-item ${dashTab === 'contest' ? 'active' : ''}`}
-                onClick={() => setDashTab('contest')}
+                onClick={() => { setDashTab('contest'); setIsMobileMenuOpen(false); }}
               >
                 <Star size={16} /> Contest Awards
               </button>
               <button 
                 className="dash-nav-item"
-                onClick={() => setView('about')}
+                onClick={() => { setView('about'); setIsMobileMenuOpen(false); }}
               >
                 <Gem size={16} /> Explore Elements
               </button>
               <button 
                 className={`dash-nav-item ${dashTab === 'referral' ? 'active' : ''}`}
-                onClick={() => setDashTab('referral')}
+                onClick={() => { setDashTab('referral'); setIsMobileMenuOpen(false); }}
               >
                 <Gift size={16} /> Referral Program
               </button>
               <button 
                 className={`dash-nav-item ${dashTab === 'profile' ? 'active' : ''}`}
-                onClick={() => setDashTab('profile')}
+                onClick={() => { setDashTab('profile'); setIsMobileMenuOpen(false); }}
               >
                 <User size={16} /> Vault Profile
               </button>
+              {user && (
+                <div className="mobile-user-badge">
+                  <div className="user-info-text">
+                    <span className="user-email-text">{user.email}</span>
+                    <span className="kyc-badge">{user.email === 'sandeepkumar.pikili@vrpigroup.co.in' ? 'ADMIN' : 'KYC SECURED'}</span>
+                  </div>
+                  <button type="button" className="btn-sec-signout" onClick={handleSignOut} title="Secure Sign Out">
+                    <LogOut size={16} /> Sign Out
+                  </button>
+                </div>
+              )}
             </nav>
             
             <div className="dash-user-badge">
@@ -3317,21 +3339,9 @@ function App() {
           )}
 
           {dashTab === 'trade' && (
-            <div className="tab-pane-view trade-view animate-fade-in" style={{ display: 'flex', gap: '30px', width: '100%', padding: '0 40px', boxSizing: 'border-box' }}>
+            <div className="tab-pane-view trade-view animate-fade-in trade-view-layout">
               {/* Disclaimer on the left side */}
-              <div style={{ 
-                width: '260px', 
-                flexShrink: 0, 
-                alignSelf: 'flex-start', 
-                marginTop: '160px',
-                background: 'rgba(217, 175, 86, 0.05)', 
-                border: '1px solid rgba(217, 175, 86, 0.2)', 
-                borderRadius: '16px', 
-                padding: '20px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '15px'
-              }}>
+              <div className="trade-disclaimer-card">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <AlertCircle size={18} style={{ color: '#d9af56' }} />
                   <h3 style={{ color: '#d9af56', fontSize: '14px', fontWeight: 'bold', margin: 0 }}>Disclaimer</h3>
@@ -3392,7 +3402,7 @@ function App() {
                   </button>
                 )}
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="trade-chart-container">
                 <LiveChartWidget user={user} withdrawableBalance={withdrawableBalance} />
               </div>
             </div>
@@ -3922,12 +3932,12 @@ function App() {
                       <label>Bank Beneficiary Name</label>
                       <input type="text" placeholder="Account Holder Name" value={bankName} onChange={(e) => setBankName(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.2)', color: '#fff', outline: 'none' }} />
                     </div>
-                    <div style={{ display: 'flex', gap: '16px' }}>
-                      <div className="funding-input-group" style={{ flex: 1 }}>
+                    <div className="modal-input-row">
+                      <div className="funding-input-group">
                         <label>Account Number</label>
                         <input type="text" placeholder="Account Number" value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.2)', color: '#fff', outline: 'none' }} />
                       </div>
-                      <div className="funding-input-group" style={{ flex: 1 }}>
+                      <div className="funding-input-group">
                         <label>IFSC Code</label>
                         <input type="text" placeholder="IFSC Code" value={ifscCode} onChange={(e) => setIfscCode(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.2)', color: '#fff', outline: 'none', textTransform: 'uppercase' }} />
                       </div>
@@ -4320,50 +4330,71 @@ function App() {
             </div>
             
             {user && (
-              <nav className="nav-menu dashboard-nav">
+              <>
                 <button 
-                  className="dash-nav-item"
-                  onClick={() => { setView('dashboard'); setDashTab('portfolio'); }}
+                  type="button" 
+                  className="hamburger-btn" 
+                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                  aria-label="Toggle Menu"
                 >
-                  <Briefcase size={16} /> Portfolio
+                  {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
                 </button>
-                <button 
-                  className="dash-nav-item"
-                  onClick={() => { setView('dashboard'); setDashTab('trade'); }}
-                >
-                  <ArrowRightLeft size={16} /> Trade
-                </button>
-                <button 
-                  className="dash-nav-item"
-                  onClick={() => { setView('dashboard'); setDashTab('wallet'); }}
-                >
-                  <Wallet size={16} /> Wallet
-                </button>
-                <button 
-                  className="dash-nav-item"
-                  onClick={() => { setView('dashboard'); setDashTab('contest'); }}
-                >
-                  <Star size={16} /> Contest Awards
-                </button>
-                <button 
-                  className="dash-nav-item"
-                  onClick={() => setView('about')}
-                >
-                  <Gem size={16} /> Explore Elements
-                </button>
-                <button 
-                  className="dash-nav-item"
-                  onClick={() => { setView('dashboard'); setDashTab('referral'); }}
-                >
-                  <Gift size={16} /> Referral Program
-                </button>
-                <button 
-                  className="dash-nav-item"
-                  onClick={() => { setView('dashboard'); setDashTab('profile'); }}
-                >
-                  <User size={16} /> Vault Profile
-                </button>
-              </nav>
+                <nav className={`nav-menu dashboard-nav ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
+                  <button 
+                    className="dash-nav-item"
+                    onClick={() => { setView('dashboard'); setDashTab('portfolio'); setIsMobileMenuOpen(false); }}
+                  >
+                    <Briefcase size={16} /> Portfolio
+                  </button>
+                  <button 
+                    className="dash-nav-item"
+                    onClick={() => { setView('dashboard'); setDashTab('trade'); setIsMobileMenuOpen(false); }}
+                  >
+                    <ArrowRightLeft size={16} /> Trade
+                  </button>
+                  <button 
+                    className="dash-nav-item"
+                    onClick={() => { setView('dashboard'); setDashTab('wallet'); setIsMobileMenuOpen(false); }}
+                  >
+                    <Wallet size={16} /> Wallet
+                  </button>
+                  <button 
+                    className="dash-nav-item"
+                    onClick={() => { setView('dashboard'); setDashTab('contest'); setIsMobileMenuOpen(false); }}
+                  >
+                    <Star size={16} /> Contest Awards
+                  </button>
+                  <button 
+                    className="dash-nav-item"
+                    onClick={() => { setView('about'); setIsMobileMenuOpen(false); }}
+                  >
+                    <Gem size={16} /> Explore Elements
+                  </button>
+                  <button 
+                    className="dash-nav-item"
+                    onClick={() => { setView('dashboard'); setDashTab('referral'); setIsMobileMenuOpen(false); }}
+                  >
+                    <Gift size={16} /> Referral Program
+                  </button>
+                  <button 
+                    className="dash-nav-item"
+                    onClick={() => { setView('dashboard'); setDashTab('profile'); setIsMobileMenuOpen(false); }}
+                  >
+                    <User size={16} /> Vault Profile
+                  </button>
+                  {user && (
+                    <div className="mobile-user-badge">
+                      <div className="user-info-text">
+                        <span className="user-email-text">{user.email}</span>
+                        <span className="kyc-badge">{user.email === 'sandeepkumar.pikili@vrpigroup.co.in' ? 'ADMIN' : 'KYC SECURED'}</span>
+                      </div>
+                      <button type="button" className="btn-sec-signout" onClick={handleSignOut} title="Secure Sign Out">
+                        <LogOut size={16} /> Sign Out
+                      </button>
+                    </div>
+                  )}
+                </nav>
+              </>
             )}
             
             {user ? (
@@ -4411,50 +4442,71 @@ function App() {
             </div>
             
             {user && (
-              <nav className="nav-menu dashboard-nav">
+              <>
                 <button 
-                  className="dash-nav-item"
-                  onClick={() => { setView('dashboard'); setDashTab('portfolio'); }}
+                  type="button" 
+                  className="hamburger-btn" 
+                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                  aria-label="Toggle Menu"
                 >
-                  <Briefcase size={16} /> Portfolio
+                  {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
                 </button>
-                <button 
-                  className="dash-nav-item"
-                  onClick={() => { setView('dashboard'); setDashTab('trade'); }}
-                >
-                  <ArrowRightLeft size={16} /> Trade
-                </button>
-                <button 
-                  className="dash-nav-item"
-                  onClick={() => { setView('dashboard'); setDashTab('wallet'); }}
-                >
-                  <Wallet size={16} /> Wallet
-                </button>
-                <button 
-                  className="dash-nav-item"
-                  onClick={() => { setView('dashboard'); setDashTab('contest'); }}
-                >
-                  <Star size={16} /> Contest Awards
-                </button>
-                <button 
-                  className="dash-nav-item"
-                  onClick={() => setView('about')}
-                >
-                  <Gem size={16} /> Explore Elements
-                </button>
-                <button 
-                  className="dash-nav-item"
-                  onClick={() => { setView('dashboard'); setDashTab('referral'); }}
-                >
-                  <Gift size={16} /> Referral Program
-                </button>
-                <button 
-                  className="dash-nav-item"
-                  onClick={() => { setView('dashboard'); setDashTab('profile'); }}
-                >
-                  <User size={16} /> Vault Profile
-                </button>
-              </nav>
+                <nav className={`nav-menu dashboard-nav ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
+                  <button 
+                    className="dash-nav-item"
+                    onClick={() => { setView('dashboard'); setDashTab('portfolio'); setIsMobileMenuOpen(false); }}
+                  >
+                    <Briefcase size={16} /> Portfolio
+                  </button>
+                  <button 
+                    className="dash-nav-item"
+                    onClick={() => { setView('dashboard'); setDashTab('trade'); setIsMobileMenuOpen(false); }}
+                  >
+                    <ArrowRightLeft size={16} /> Trade
+                  </button>
+                  <button 
+                    className="dash-nav-item"
+                    onClick={() => { setView('dashboard'); setDashTab('wallet'); setIsMobileMenuOpen(false); }}
+                  >
+                    <Wallet size={16} /> Wallet
+                  </button>
+                  <button 
+                    className="dash-nav-item"
+                    onClick={() => { setView('dashboard'); setDashTab('contest'); setIsMobileMenuOpen(false); }}
+                  >
+                    <Star size={16} /> Contest Awards
+                  </button>
+                  <button 
+                    className="dash-nav-item"
+                    onClick={() => { setView('about'); setIsMobileMenuOpen(false); }}
+                  >
+                    <Gem size={16} /> Explore Elements
+                  </button>
+                  <button 
+                    className="dash-nav-item"
+                    onClick={() => { setView('dashboard'); setDashTab('referral'); setIsMobileMenuOpen(false); }}
+                  >
+                    <Gift size={16} /> Referral Program
+                  </button>
+                  <button 
+                    className="dash-nav-item"
+                    onClick={() => { setView('dashboard'); setDashTab('profile'); setIsMobileMenuOpen(false); }}
+                  >
+                    <User size={16} /> Vault Profile
+                  </button>
+                  {user && (
+                    <div className="mobile-user-badge">
+                      <div className="user-info-text">
+                        <span className="user-email-text">{user.email}</span>
+                        <span className="kyc-badge">{user.email === 'sandeepkumar.pikili@vrpigroup.co.in' ? 'ADMIN' : 'KYC SECURED'}</span>
+                      </div>
+                      <button type="button" className="btn-sec-signout" onClick={handleSignOut} title="Secure Sign Out">
+                        <LogOut size={16} /> Sign Out
+                      </button>
+                    </div>
+                  )}
+                </nav>
+              </>
             )}
             
             {user ? (
@@ -4507,7 +4559,7 @@ function App() {
                       <label>Bank Beneficiary Name</label>
                       <input type="text" placeholder="Account Holder Name" value={bankName} onChange={(e) => setBankName(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.2)', color: '#fff', outline: 'none' }} />
                     </div>
-                    <div style={{ display: 'flex', gap: '16px' }}>
+                    <div className="modal-input-row">
                       <div className="funding-input-group" style={{ flex: 1 }}>
                         <label>Account Number</label>
                         <input type="text" placeholder="Account Number" value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.2)', color: '#fff', outline: 'none' }} />
@@ -4597,59 +4649,79 @@ function App() {
               <InvesthourLogoText />
             </div>
             
+            <button 
+              type="button" 
+              className="hamburger-btn" 
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              aria-label="Toggle Menu"
+            >
+              {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
+            
             {user && (
-              <nav className="nav-menu dashboard-nav">
+              <nav className={`nav-menu dashboard-nav ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
                 <button 
                   className="dash-nav-item"
-                  onClick={() => { setView('dashboard'); setDashTab('portfolio'); }}
+                  onClick={() => { setView('dashboard'); setDashTab('portfolio'); setIsMobileMenuOpen(false); }}
                 >
                   <Briefcase size={16} /> Portfolio
                 </button>
                 <button 
                   className="dash-nav-item"
-                  onClick={() => { setView('dashboard'); setDashTab('trade'); }}
+                  onClick={() => { setView('dashboard'); setDashTab('trade'); setIsMobileMenuOpen(false); }}
                 >
                   <ArrowRightLeft size={16} /> Trade
                 </button>
                 <button 
                   className="dash-nav-item"
-                  onClick={() => { setView('dashboard'); setDashTab('wallet'); }}
+                  onClick={() => { setView('dashboard'); setDashTab('wallet'); setIsMobileMenuOpen(false); }}
                 >
                   <Wallet size={16} /> Wallet
                 </button>
                 <button 
                   className="dash-nav-item"
-                  onClick={() => { setView('dashboard'); setDashTab('contest'); }}
+                  onClick={() => { setView('dashboard'); setDashTab('contest'); setIsMobileMenuOpen(false); }}
                 >
                   <Star size={16} /> Contest Awards
                 </button>
                 <button 
                   className="dash-nav-item"
-                  onClick={() => setView('about')}
+                  onClick={() => { setView('about'); setIsMobileMenuOpen(false); }}
                 >
                   <Gem size={16} /> Explore Elements
                 </button>
                 <button 
                   className="dash-nav-item active"
-                  onClick={() => setView('referral-program')}
+                  onClick={() => { setView('referral-program'); setIsMobileMenuOpen(false); }}
                 >
                   <Gift size={16} /> Referral Program
                 </button>
                 <button 
                   className="dash-nav-item"
-                  onClick={() => { setView('dashboard'); setDashTab('profile'); }}
+                  onClick={() => { setView('dashboard'); setDashTab('profile'); setIsMobileMenuOpen(false); }}
                 >
                   <User size={16} /> Vault Profile
                 </button>
+                {user && (
+                  <div className="mobile-user-badge">
+                    <div className="user-info-text">
+                      <span className="user-email-text">{user.email}</span>
+                      <span className="kyc-badge">{user.email === 'sandeepkumar.pikili@vrpigroup.co.in' ? 'ADMIN' : 'KYC SECURED'}</span>
+                    </div>
+                    <button type="button" className="btn-sec-signout" onClick={handleSignOut} title="Secure Sign Out">
+                      <LogOut size={16} /> Sign Out
+                    </button>
+                  </div>
+                )}
               </nav>
             )}
 
             {!user && (
-              <nav className="nav-menu">
-                <a href="#home" className="nav-item" onClick={(e) => { e.preventDefault(); setView('home'); }}>Home</a>
-                <a href="#contest" className="nav-item" onClick={(e) => { e.preventDefault(); setView('contest-awards'); }}>Contest Awards</a>
-                <a href="#about" className="nav-item" onClick={(e) => { e.preventDefault(); setView('about'); }}>Explore Elements</a>
-                <a href="#referral" className="nav-item active" onClick={(e) => { e.preventDefault(); setView('referral-program'); }}>Referral Program</a>
+              <nav className={`nav-menu ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
+                <a href="#home" className="nav-item" onClick={(e) => { e.preventDefault(); setView('home'); setIsMobileMenuOpen(false); }}>Home</a>
+                <a href="#contest" className="nav-item" onClick={(e) => { e.preventDefault(); setView('contest-awards'); setIsMobileMenuOpen(false); }}>Contest Awards</a>
+                <a href="#about" className="nav-item" onClick={(e) => { e.preventDefault(); setView('about'); setIsMobileMenuOpen(false); }}>Explore Elements</a>
+                <a href="#referral" className="nav-item active" onClick={(e) => { e.preventDefault(); setView('referral-program'); setIsMobileMenuOpen(false); }}>Referral Program</a>
               </nav>
             )}
             
@@ -4688,11 +4760,32 @@ function App() {
           <div className="logo-section">
             <InvesthourLogoText />
           </div>
-          <nav className="nav-menu">
-            <a href="#home" className="nav-item active">Home</a>
-            <a href="#contest" className="nav-item" onClick={(e) => { e.preventDefault(); setView('contest-awards'); }}>Contest Awards</a>
-            <a href="#about" className="nav-item" onClick={(e) => { e.preventDefault(); setView('about'); }}>Explore Elements</a>
-            <a href="#referral" className="nav-item" onClick={(e) => { e.preventDefault(); setView('referral-program'); }}>Referral Program</a>
+          
+          <button 
+            type="button" 
+            className="hamburger-btn" 
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            aria-label="Toggle Menu"
+          >
+            {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
+          
+          <nav className={`nav-menu ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
+            <a href="#home" className="nav-item active" onClick={(e) => { e.preventDefault(); setIsMobileMenuOpen(false); }}>Home</a>
+            <a href="#contest" className="nav-item" onClick={(e) => { e.preventDefault(); setView('contest-awards'); setIsMobileMenuOpen(false); }}>Contest Awards</a>
+            <a href="#about" className="nav-item" onClick={(e) => { e.preventDefault(); setView('about'); setIsMobileMenuOpen(false); }}>Explore Elements</a>
+            <a href="#referral" className="nav-item" onClick={(e) => { e.preventDefault(); setView('referral-program'); setIsMobileMenuOpen(false); }}>Referral Program</a>
+            {user && (
+              <div className="mobile-user-badge">
+                <div className="user-info-text" onClick={() => { setView('dashboard'); setIsMobileMenuOpen(false); }} style={{ cursor: 'pointer' }}>
+                  <span className="user-email-text">{user.email}</span>
+                  <span className="kyc-badge">GO TO PORTFOLIO</span>
+                </div>
+                <button type="button" className="btn-sec-signout" onClick={handleSignOut} title="Secure Sign Out">
+                  <LogOut size={16} /> Sign Out
+                </button>
+              </div>
+            )}
           </nav>
           {user ? (
             <div className="dash-user-badge" style={{ cursor: 'pointer' }} onClick={() => setView('dashboard')}>
