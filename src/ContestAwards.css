@@ -162,7 +162,7 @@
 
 .prize-cards-container {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 16px;
   margin-bottom: 24px;
 }
@@ -253,6 +253,7 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
 }
 
 .leaderboard-table-container {
@@ -398,6 +399,7 @@
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 16px;
   padding: 24px;
+  min-width: 0;
 }
 
 .status-text.won {
@@ -555,9 +557,7 @@
   .leaderboard-table {
     min-width: 500px;
   }
-}
 
-@media (max-width: 600px) {
   .contest-hero-meta {
     flex-direction: column !important;
     align-items: flex-start !important;
@@ -565,6 +565,11 @@
   }
   .milestone-detail {
     display: none !important;
+  }
+  .progress-header-row {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
   }
   .progress-status-footer {
     flex-direction: column !important;
@@ -575,6 +580,16 @@
     flex-direction: column !important;
     align-items: flex-start !important;
     gap: 8px !important;
+  }
+  .trades-panel-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+  .btn-place-contest-trade {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 10px !important;
   }
 
   /* Convert Contest Trades Table to Premium Stacking Cards */
@@ -635,25 +650,30 @@
   .contest-trades-panel .ledger-table td[colSpan="7"]::before {
     display: none !important;
   }
+
+  .registration-cta-card {
+    padding: 24px !important;
+    margin: 20px auto !important;
+  }
+  .registration-cta-card h2 {
+    font-size: 22px !important;
+  }
+  .registration-cta-card p {
+    font-size: 13.5px !important;
+    margin-bottom: 20px !important;
+  }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 600px) {
   .milestone-mid {
     display: none !important;
   }
+}
+
+@media (max-width: 480px) {
   .leaderboard-table th, .leaderboard-table td {
     padding: 8px 6px !important;
     font-size: 12px !important;
-  }
-  .trades-panel-header {
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 10px !important;
-  }
-  .btn-place-contest-trade {
-    width: 100% !important;
-    justify-content: center !important;
-    padding: 10px !important;
   }
 }
 

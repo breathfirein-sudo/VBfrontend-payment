@@ -351,7 +351,7 @@ const ContestAwards = ({ user, rates, walletBalance, onTradeRedirect }) => {
                 </button>
               </div>
 
-              <div className="activity-ledger-table-container" style={{ maxHeight: '400px', overflowY: 'auto' }}>
+              <div className="activity-ledger-table-container" style={{ maxHeight: '400px', overflowY: 'auto', overflowX: 'auto' }}>
                 <table className="ledger-table" style={{ width: '100%' }}>
                   <thead>
                     <tr>
