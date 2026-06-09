@@ -524,6 +524,15 @@
 }
 
 /* Responsive adjustments for Contest Dashboard Page */
+@media (max-width: 992px) {
+  .contest-trades-panel .ledger-table th:nth-child(4),
+  .contest-trades-panel .ledger-table td:nth-child(4), /* Risk Amount */
+  .contest-trades-panel .ledger-table th:nth-child(7),
+  .contest-trades-panel .ledger-table td:nth-child(7) /* Status */ {
+    display: none !important;
+  }
+}
+
 @media (max-width: 768px) {
   .contest-hero-card {
     padding: 20px !important;
@@ -571,6 +580,10 @@
     align-items: flex-start !important;
     gap: 8px !important;
   }
+  .contest-trades-panel .ledger-table th:nth-child(5),
+  .contest-trades-panel .ledger-table td:nth-child(5) /* Close Price */ {
+    display: none !important;
+  }
 }
 
 @media (max-width: 480px) {
@@ -595,18 +608,11 @@
     justify-content: center !important;
     padding: 10px !important;
   }
-  .contest-trades-panel .ledger-table th:nth-child(4),
-  .contest-trades-panel .ledger-table td:nth-child(4),
-  .contest-trades-panel .ledger-table th:nth-child(7),
-  .contest-trades-panel .ledger-table td:nth-child(7),
-  .contest-trades-panel .ledger-table th:nth-child(5),
-  .contest-trades-panel .ledger-table td:nth-child(5) {
-    display: none !important;
-  }
   .contest-trades-panel .ledger-table th, 
   .contest-trades-panel .ledger-table td {
     padding: 8px 6px !important;
     font-size: 12px !important;
   }
 }
+
 
