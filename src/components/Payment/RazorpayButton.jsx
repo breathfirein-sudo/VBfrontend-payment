@@ -27,8 +27,8 @@ const RazorpayButton = ({ amount, type, onSuccess, onError, payoutDetails }) => 
     }
 
     if (type === 'deposit') {
-      if (amount < 1) {
-        alert("Minimum deposit amount is ₹1");
+      if (amount < 100) {
+        alert("Minimum deposit amount is ₹100");
         return;
       }
       if (amount > 100000) {
@@ -38,8 +38,8 @@ const RazorpayButton = ({ amount, type, onSuccess, onError, payoutDetails }) => 
     }
 
     if (type === 'withdraw') {
-      if (amount < 1) {
-        alert("Minimum withdrawal amount is ₹1");
+      if (amount < 500) {
+        alert("Minimum withdrawal amount is ₹500");
         return;
       }
     }

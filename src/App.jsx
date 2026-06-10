@@ -3569,7 +3569,7 @@ function App() {
                         <label>Deposit Amount (INR)</label>
                         <div className="funding-input-field-wrapper">
                           <span className="currency-symbol">{'\u20b9'}</span>
-                          <input type="number" placeholder="Enter amount to add" value={depositAmount} onChange={(e) => setDepositAmount(e.target.value)} />
+                          <input type="number" placeholder="Enter amount (min 100)" value={depositAmount} onChange={(e) => setDepositAmount(e.target.value)} />
                         </div>
                         <RazorpayButton 
                           amount={parseFloat(depositAmount) || 0} 
@@ -4049,7 +4049,7 @@ function App() {
                   <label>Amount to Withdraw (INR)</label>
                   <div className="funding-input-field-wrapper">
                     <span className="currency-symbol">{'\u20b9'}</span>
-                    <input type="number" placeholder="Enter amount (min 1)" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} />
+                    <input type="number" placeholder="Enter amount (min 500)" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} />
                   </div>
                 </div>
 
@@ -4092,8 +4092,8 @@ function App() {
                   }
                   onSuccess={(data) => {
                     const val = parseFloat(withdrawAmount);
-                    if (val < 1) {
-                      alert('Minimum withdrawal is ₹1.');
+                    if (val < 500) {
+                      alert('Minimum withdrawal is ₹500.');
                       return;
                     }
                     if (withdrawableBalance < val) {
@@ -4115,8 +4115,8 @@ function App() {
                       alert(err.response.data.error);
                     } else if (withdrawableBalance < parseFloat(withdrawAmount)) {
                       alert(`Insufficient withdrawable balance. Your withdrawable balance is ₹${withdrawableBalance.toFixed(2)}.`);
-                    } else if (parseFloat(withdrawAmount) < 1) {
-                      alert('Minimum withdrawal is ₹1.');
+                    } else if (parseFloat(withdrawAmount) < 500) {
+                      alert('Minimum withdrawal is ₹500.');
                     }
                   }}
                 />
@@ -4687,7 +4687,7 @@ function App() {
                   <label>Amount to Withdraw (INR)</label>
                   <div className="funding-input-field-wrapper">
                     <span className="currency-symbol">{'\u20b9'}</span>
-                    <input type="number" placeholder="Enter amount (min 1)" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} />
+                    <input type="number" placeholder="Enter amount (min 500)" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} />
                   </div>
                 </div>
 
@@ -4730,8 +4730,8 @@ function App() {
                   }
                   onSuccess={(data) => {
                     const val = parseFloat(withdrawAmount);
-                    if (val < 1) {
-                      alert('Minimum withdrawal is ₹1.');
+                    if (val < 500) {
+                      alert('Minimum withdrawal is ₹500.');
                       return;
                     }
                     if (withdrawableBalance < val) {
@@ -4751,8 +4751,8 @@ function App() {
                   onError={(err) => {
                     if (err?.response?.data?.error === 'Insufficient wallet balance' || withdrawableBalance < parseFloat(withdrawAmount)) {
                        alert('Insufficient balance in your secure wallet.');
-                    } else if (parseFloat(withdrawAmount) < 1) {
-                       alert('Minimum withdrawal is ₹1.');
+                    } else if (parseFloat(withdrawAmount) < 500) {
+                       alert('Minimum withdrawal is ₹500.');
                     }
                   }}
                 />
