@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clear VB Storage</title>
+</head>
+<body>
+    <h1>Clear VB Application Storage</h1>
+    <button onclick="clearStorage()">Clear All Data</button>
+    <p id="status"></p>
+    
+    <script>
+        function clearStorage() {
+            localStorage.removeItem('vb_clients');
+            document.getElementById('status').textContent = 'Storage cleared! Please refresh your application.';
+            document.getElementById('status').style.color = 'green';
+        }
+    </script>
+</body>
+</html>
