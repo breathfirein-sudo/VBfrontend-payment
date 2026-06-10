@@ -3959,3 +3959,190 @@
     display: none !important;
   }
 }
+
+/* --- Super Admin Dashboard Responsiveness --- */
+
+/* Header & Nav Adjustments */
+.admin-header-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  width: 100%;
+}
+
+.admin-header-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+@media (max-width: 768px) {
+  .admin-header-nav {
+    flex-direction: column;
+    gap: 12px;
+    padding: 15px 10px;
+    align-items: stretch;
+    text-align: center;
+  }
+  
+  .admin-header-nav .logo-section {
+    justify-content: center;
+  }
+  
+  .admin-header-right {
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    align-items: center;
+  }
+  
+  .admin-header-right > div {
+    text-align: center !important;
+  }
+  
+  .admin-dashboard .btn-sec-signout {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Tabs Toggle Navigation */
+.admin-tabs-toggle {
+  display: flex;
+  gap: 15px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 12px;
+  margin-top: 10px;
+  overflow-x: auto;
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
+}
+
+.admin-tabs-toggle::-webkit-scrollbar {
+  height: 4px;
+}
+
+.admin-tabs-toggle::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+
+.admin-tabs-toggle button {
+  flex-shrink: 0;
+}
+
+/* Workspaces Split Layout Grid */
+.admin-grid-layout {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 24px;
+}
+
+.admin-col-7 {
+  grid-column: span 7;
+}
+
+.admin-col-5 {
+  grid-column: span 5;
+}
+
+@media (max-width: 1024px) {
+  .admin-grid-layout {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .admin-col-7,
+  .admin-col-5 {
+    grid-column: span 12;
+  }
+}
+
+/* Ledger Adjuster Row & KYC Status Buttons */
+.admin-ledger-adjuster-row {
+  display: flex;
+  gap: 10px;
+}
+
+.admin-ledger-adjuster-group {
+  display: flex;
+  flex: 1;
+  gap: 6px;
+}
+
+.admin-kyc-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.admin-kyc-file-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.admin-withdrawal-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 580px) {
+  .admin-ledger-adjuster-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .admin-kyc-actions button,
+  .admin-kyc-file-actions button {
+    flex: 1;
+    min-width: 100px;
+    justify-content: center;
+  }
+  
+  .admin-withdrawal-actions {
+    justify-content: center;
+    width: 100%;
+  }
+  
+  .admin-withdrawal-actions button {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
+/* KYC File Preview container details */
+.kyc-file-preview {
+  margin-top: 0;
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.2);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-radius: 8px;
+}
+
+@media (max-width: 580px) {
+  .kyc-file-preview {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+}
+
+/* Home Page Winners & About Section Responsiveness */
+@media (max-width: 991px) {
+  .grid-2col-winners, .grid-2col-about {
+    grid-template-columns: 1fr !important;
+    gap: 30px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .about-grid-metrics {
+    grid-template-columns: 1fr !important;
+  }
+}

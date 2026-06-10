@@ -48,6 +48,7 @@ const TradingChart = forwardRef(({ data, volumeData, backgroundColor = 'transpar
     }
   }));
 
+  // Effect 1: Create the chart instance ONCE on mount. Never re-run this.
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
@@ -93,13 +94,6 @@ const TradingChart = forwardRef(({ data, volumeData, backgroundColor = 'transpar
     });
     candlestickSeriesRef.current = candlestickSeries;
 
-    if (data && data.length > 0) {
-      candlestickSeries.setData(data);
-    }
-    if (volumeData && volumeData.length > 0) {
-      volumeSeries.setData(volumeData);
-    }
-
     const resizeObserver = new ResizeObserver((entries) => {
       if (!entries || entries.length === 0) return;
       const { width } = entries[0].contentRect;
@@ -112,8 +106,23 @@ const TradingChart = forwardRef(({ data, volumeData, backgroundColor = 'transpar
     return () => {
       resizeObserver.disconnect();
       chart.remove();
+      chartRef.current = null;
+      candlestickSeriesRef.current = null;
+      volumeSeriesRef.current = null;
     };
-  }, [data, volumeData, backgroundColor, textColor]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Effect 2: Load historical candle data whenever the symbol/interval changes.
+  // Live tick updates go through the imperative updateCandle() handle — NOT here.
+  useEffect(() => {
+    if (!candlestickSeriesRef.current || !volumeSeriesRef.current) return;
+    if (data && data.length > 0) {
+      candlestickSeriesRef.current.setData(data);
+    }
+    if (volumeData && volumeData.length > 0) {
+      volumeSeriesRef.current.setData(volumeData);
+    }
+  }, [data, volumeData]);
 
   return (
     <div
