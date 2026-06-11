@@ -1,10 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { createOrder, verifyPayment } from '../../services/paymentService';
-import { Plus, Minus, Loader2 } from 'lucide-react';
+import { Plus, Minus, Loader2, Lock } from 'lucide-react';
 
 // Load Razorpay script dynamically
 const loadRazorpayScript = () => {
   return new Promise((resolve) => {
+    if (window.Razorpay) {
+      resolve(true);
+      return;
+    }
+    const existingScript = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
+    if (existingScript) {
+      existingScript.onload = () => resolve(true);
+      return;
+    }
     const script = document.createElement('script');
     script.src = 'https://checkout.razorpay.com/v1/checkout.js';
     script.onload = () => resolve(true);
@@ -72,8 +81,14 @@ const RazorpayButton = ({ amount, type, onSuccess, onError, payoutDetails }) => 
         return;
       }
 
-      if (orderData.simulated) {
-        const confirmPay = window.confirm(`Simulated Deposit Fallback:\nWould you like to simulate a successful payment of ₹${amount}?`);
+      const isDummyKey = !orderData.keyId || orderData.keyId === 'rzp_test_simulated';
+
+      if (orderData.simulated && isDummyKey) {
+        const confirmPay = window.confirm(
+          type === 'unlock'
+            ? `Simulated Unlock Fallback:\nWould you like to simulate a successful account unlock payment of ₹${amount}?`
+            : `Simulated Deposit Fallback:\nWould you like to simulate a successful payment of ₹${amount}?`
+        );
         if (confirmPay) {
           try {
             const verifyResult = await verifyPayment({
@@ -83,7 +98,11 @@ const RazorpayButton = ({ amount, type, onSuccess, onError, payoutDetails }) => 
             });
 
             if (verifyResult.success) {
-              alert('Payment successful (Simulated)! Funds added to your wallet.');
+              alert(
+                type === 'unlock'
+                  ? 'Payment successful (Simulated)! Your account is now unlocked.'
+                  : 'Payment successful (Simulated)! Funds added to your wallet.'
+              );
               if (onSuccess) onSuccess(verifyResult);
             } else {
               alert('Simulated payment verification failed.');
@@ -95,32 +114,36 @@ const RazorpayButton = ({ amount, type, onSuccess, onError, payoutDetails }) => 
             if (onError) onError(err);
           }
         } else {
-          alert('Deposit transaction cancelled.');
+          alert(type === 'unlock' ? 'Unlock transaction cancelled.' : 'Deposit transaction cancelled.');
           if (onError) onError('Cancelled');
         }
         setLoading(false);
         return;
       }
 
-      // 2. Setup Razorpay Checkout options for deposit
+      // 2. Setup Razorpay Checkout options for deposit/unlock
       const options = {
         key: orderData.keyId, // Using the key provided by the backend
         amount: orderData.amount,
         currency: orderData.currency,
-        name: 'Investhour Secure Wallet',
-        description: 'Fund Deposit',
-        order_id: orderData.orderId,
+        name: type === 'unlock' ? 'Investhour Vault Unlock' : 'Investhour Secure Wallet',
+        description: type === 'unlock' ? 'Setup & Account Opening Fee' : 'Fund Deposit',
+        order_id: orderData.simulated ? undefined : orderData.orderId, // Omit order_id if standard checkout fallback
         handler: async (response) => {
           try {
             // 3. Verify payment signature on backend
             const verifyResult = await verifyPayment({
-              razorpay_order_id: response.razorpay_order_id,
+              razorpay_order_id: response.razorpay_order_id || orderData.orderId,
               razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
+              razorpay_signature: response.razorpay_signature || 'standard_bypass',
             });
 
             if (verifyResult.success) {
-              alert('Payment successful! Funds added to your wallet.');
+              alert(
+                type === 'unlock'
+                  ? 'Payment successful! Your account is now unlocked.'
+                  : 'Payment successful! Funds added to your wallet.'
+              );
               if (onSuccess) onSuccess(verifyResult);
             } else {
               alert('Payment verification failed.');
@@ -138,7 +161,7 @@ const RazorpayButton = ({ amount, type, onSuccess, onError, payoutDetails }) => 
           contact: '9999999999'
         },
         theme: {
-          color: '#10b981' // Matching Investhour's green theme for deposits
+          color: '#10b981' // Matching Investhour's green theme
         }
       };
 
@@ -163,19 +186,21 @@ const RazorpayButton = ({ amount, type, onSuccess, onError, payoutDetails }) => 
   };
 
   const isDeposit = type === 'deposit';
+  const isUnlock = type === 'unlock';
+  const isGreenBtn = isDeposit || isUnlock;
 
   return (
     <button 
       onClick={handlePayment} 
       disabled={loading}
       className={`w-full py-4 rounded-xl flex items-center justify-center gap-2 font-bold transition-all duration-300 transform hover:scale-[1.02] active:scale-95 ${
-        isDeposit 
+        isGreenBtn 
         ? 'bg-gradient-to-r from-emerald-500 to-emerald-400 text-white shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40 border border-emerald-400/30'
         : 'bg-[#120524] text-white border border-[rgba(255,255,255,0.1)] hover:bg-[#1a0b2e]'
       }`}
       style={{
-        background: isDeposit ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : '#120524',
-        border: isDeposit ? 'none' : '1px solid rgba(255,255,255,0.1)',
+        background: isGreenBtn ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : '#120524',
+        border: isGreenBtn ? 'none' : '1px solid rgba(255,255,255,0.1)',
         padding: '16px',
         width: '100%',
         borderRadius: '12px',
@@ -191,12 +216,14 @@ const RazorpayButton = ({ amount, type, onSuccess, onError, payoutDetails }) => 
     >
       {loading ? (
         <Loader2 size={16} className="animate-spin" />
+      ) : isUnlock ? (
+        <Lock size={16} />
       ) : isDeposit ? (
         <Plus size={16} />
       ) : (
         <Minus size={16} />
       )}
-      {loading ? 'Processing...' : isDeposit ? 'Deposit Funds Securely' : 'Withdraw Funds'}
+      {loading ? 'Processing...' : isUnlock ? 'Pay ₹10 to Unlock Instantly' : isDeposit ? 'Deposit Funds Securely' : 'Withdraw Funds'}
     </button>
   );
 };

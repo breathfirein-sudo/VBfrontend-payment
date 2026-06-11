@@ -257,7 +257,17 @@ function App() {
     reader.readAsDataURL(kycFile);
   };
 
-  const handleKycRestart = () => {
+  const handleKycRestart = async () => {
+    try {
+      await fetch(`${VITE_BACKEND_URL}/api/auth/kyc/delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: user.email })
+      });
+    } catch (e) {
+      console.error("Failed to sync KYC restart on backend:", e);
+    }
+
     setClients(prev => {
       const next = prev.map(c => {
         if (c.email.toLowerCase() === user.email.toLowerCase()) {
@@ -273,6 +283,72 @@ function App() {
       localStorage.setItem('vb_clients', JSON.stringify(next));
       return next;
     });
+  };
+
+  const handleKycDelete = async () => {
+    if (!window.confirm("Are you sure you want to delete your submitted KYC document?")) return;
+    try {
+      const res = await fetch(`${VITE_BACKEND_URL}/api/auth/kyc/delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: user.email })
+      });
+      if (res.ok) {
+        setClients(prev => {
+          const next = prev.map(c => {
+            if (c.email.toLowerCase() === user.email.toLowerCase()) {
+              return {
+                ...c,
+                kycStatus: 'Pending',
+                kycDocument: null,
+                kycRejectionReason: null
+              };
+            }
+            return c;
+          });
+          localStorage.setItem('vb_clients', JSON.stringify(next));
+          return next;
+        });
+        alert("KYC document deleted successfully.");
+      } else {
+        alert("Failed to delete KYC document.");
+      }
+    } catch (err) {
+      alert("Error deleting KYC document: " + err.message);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    const doubleConfirm = window.prompt("WARNING: Deleting your account will permanently wipe all your trading progress, wallets, transactions, and documents.\n\nType 'DELETE' to confirm deletion:");
+    if (doubleConfirm !== 'DELETE') {
+      alert("Account deletion cancelled.");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${VITE_BACKEND_URL}/api/auth/delete-account`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: user.email })
+      });
+      if (res.ok) {
+        alert("Your account has been permanently deleted. Logging you out...");
+        setClients(prev => {
+          const next = prev.filter(c => c.email.toLowerCase() !== user.email.toLowerCase());
+          localStorage.setItem('vb_clients', JSON.stringify(next));
+          return next;
+        });
+        localStorage.removeItem('vb_jwt_token');
+        localStorage.removeItem('vb_local_user');
+        setUser(null);
+        setView('home');
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        alert("Failed to delete account: " + (errData.error || errData.message || "Unknown server error"));
+      }
+    } catch (error) {
+      alert("Error deleting account: " + error.message);
+    }
   };
 
   const [loading, setLoading] = useState(true);
@@ -393,6 +469,7 @@ function App() {
   const [copiedReferralLink, setCopiedReferralLink] = useState(false);
   const [copiedInspectedReferralLink, setCopiedInspectedReferralLink] = useState(false);
   const [successfulReferralsCount, setSuccessfulReferralsCount] = useState(0);
+  const [isUnlocked, setIsUnlocked] = useState(false);
   const [referralsList, setReferralsList] = useState([]);
   
   // --- Live Portfolio Balance & Holdings State ---
@@ -867,6 +944,9 @@ function App() {
             if (data.referralCount !== undefined) {
               setSuccessfulReferralsCount(data.referralCount);
             }
+            if (data.isUnlocked !== undefined) {
+              setIsUnlocked(data.isUnlocked);
+            }
             // ALWAYS use backend balance — it's the authoritative value
             if (data.walletBalance !== undefined) {
               setWalletBalance(data.walletBalance);
@@ -1030,6 +1110,9 @@ function App() {
               setView('dashboard');
               if (data.referralCount !== undefined) {
                 setSuccessfulReferralsCount(data.referralCount);
+              }
+              if (data.isUnlocked !== undefined) {
+                setIsUnlocked(data.isUnlocked);
               }
             } else {
               localStorage.removeItem('vb_local_user');
@@ -1292,7 +1375,10 @@ function App() {
       const response = await fetchWithTimeout(`${VITE_BACKEND_URL}/api/auth/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: authForm.email })
+        body: JSON.stringify({ 
+          email: authForm.email,
+          referralCode: authForm.referralCode
+        })
       });
       const data = await response.json();
       if (!response.ok || !data.success) {
@@ -3157,7 +3243,7 @@ function App() {
     });
 
   if (view === 'dashboard') {
-    if (successfulReferralsCount < 1) {
+    if (successfulReferralsCount < 1 && !isUnlocked) {
       return (
         <div id="root" className="dashboard-page-view admin-dashboard animate-fade-in" style={{ background: '#0e041b', color: '#ffffff', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
           <header className="header" style={{ borderBottom: '1px solid rgba(217, 175, 86, 0.15)', background: '#120524' }}>
@@ -3169,47 +3255,143 @@ function App() {
             </div>
           </header>
 
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-            <div style={{ background: '#120524', border: '1px solid rgba(217, 175, 86, 0.2)', padding: '40px', borderRadius: '16px', maxWidth: '500px', width: '100%', textAlign: 'center', boxShadow: '0 10px 40px rgba(0,0,0,0.5)' }}>
-              <div style={{ width: '64px', height: '64px', background: 'rgba(217, 175, 86, 0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', color: '#d9af56' }}>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 20px' }}>
+            <div style={{ 
+              background: 'linear-gradient(145deg, #120524 0%, #17092c 100%)', 
+              border: '1px solid rgba(217, 175, 86, 0.25)', 
+              padding: '40px', 
+              borderRadius: '24px', 
+              maxWidth: '850px', 
+              width: '100%', 
+              boxShadow: '0 25px 60px rgba(0,0,0,0.6)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center'
+            }}>
+              <div style={{ width: '64px', height: '64px', background: 'rgba(217, 175, 86, 0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px', color: '#d9af56' }}>
                 <Lock size={32} />
               </div>
-              <h2 style={{ fontSize: '24px', fontWeight: '800', margin: '0 0 10px 0' }}>Vault Locked</h2>
-              <p style={{ color: '#9c93a8', fontSize: '14px', lineHeight: '1.6', marginBottom: '30px' }}>
-                Welcome to Investhour! To unlock your full dashboard, live trading floor, and physical vault access, you must successfully refer at least <strong>1 friend</strong> to sign up using your unique link below.
+              <h2 style={{ fontSize: '28px', fontWeight: '800', margin: '0 0 8px 0', letterSpacing: '0.5px' }}>Vault Locked</h2>
+              <p style={{ color: '#9c93a8', fontSize: '15px', lineHeight: '1.6', maxWidth: '600px', textAlign: 'center', marginBottom: '35px' }}>
+                Welcome to Investhour! To unlock your full dashboard, live trading floor, and physical vault access, please choose one of the options below.
               </p>
 
-              <div style={{ background: 'rgba(0,0,0,0.3)', padding: '15px', borderRadius: '8px', marginBottom: '20px', border: '1px dashed rgba(217, 175, 86, 0.3)' }}>
-                <span style={{ display: 'block', fontSize: '11px', color: '#9c93a8', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '1px' }}>Your Unique Referral Link</span>
-                <input 
-                  type="text" 
-                  readOnly 
-                  value={`${window.location.origin}?ref=IH-${user?.email?.split('@')[0].toUpperCase() || 'USER'}`} 
-                  style={{ width: '100%', background: 'transparent', border: 'none', color: '#d9af56', fontSize: '13px', textAlign: 'center', outline: 'none', marginBottom: '10px' }}
-                />
-                <button 
-                  onClick={() => {
-                    navigator.clipboard.writeText(`${window.location.origin}?ref=IH-${user?.email?.split('@')[0].toUpperCase() || 'USER'}`);
-                    setCopiedReferralLink(true);
-                    setTimeout(() => setCopiedReferralLink(false), 2000);
-                  }}
-                  style={{ background: copiedReferralLink ? '#10b981' : '#d9af56', color: '#000', border: 'none', padding: '8px 16px', borderRadius: '6px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s', width: '100%' }}
-                >
-                  {copiedReferralLink ? 'Copied!' : 'Copy Link'}
-                </button>
+              {/* Two Column Layout */}
+              <div style={{ 
+                display: 'flex', 
+                flexWrap: 'wrap', 
+                gap: '24px', 
+                width: '100%',
+                justifyContent: 'center'
+              }}>
+                {/* Option 1: Referral */}
+                <div style={{ 
+                  flex: '1 1 350px', 
+                  minWidth: '280px',
+                  background: 'rgba(255, 255, 255, 0.02)', 
+                  border: '1px solid rgba(255, 255, 255, 0.06)', 
+                  borderRadius: '16px', 
+                  padding: '28px', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  justifyContent: 'space-between',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
+                }}>
+                  <div>
+                    <span style={{ fontSize: '11px', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase', color: '#d9af56', display: 'block', marginBottom: '8px' }}>Option A (Free)</span>
+                    <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#ffffff', margin: '0 0 12px 0' }}>Invite a Friend</h3>
+                    <p style={{ fontSize: '13px', color: '#9c93a8', lineHeight: '1.5', margin: '0 0 20px 0' }}>
+                      Share your unique referral link with a friend. Once they register their account, your vault will be unlocked instantly.
+                    </p>
+
+                    <div style={{ background: 'rgba(0,0,0,0.3)', padding: '15px', borderRadius: '10px', marginBottom: '20px', border: '1px dashed rgba(217, 175, 86, 0.2)' }}>
+                      <span style={{ display: 'block', fontSize: '10px', color: '#9c93a8', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '1px' }}>Your Referral Link</span>
+                      <input 
+                        type="text" 
+                        readOnly 
+                        value={`${window.location.origin}?ref=IH-${user?.email?.split('@')[0].toUpperCase() || 'USER'}`} 
+                        style={{ width: '100%', background: 'transparent', border: 'none', color: '#d9af56', fontSize: '12px', textAlign: 'center', outline: 'none', marginBottom: '10px', fontFamily: 'monospace' }}
+                      />
+                      <button 
+                        onClick={() => {
+                          navigator.clipboard.writeText(`${window.location.origin}?ref=IH-${user?.email?.split('@')[0].toUpperCase() || 'USER'}`);
+                          setCopiedReferralLink(true);
+                          setTimeout(() => setCopiedReferralLink(false), 2000);
+                        }}
+                        style={{ background: copiedReferralLink ? '#10b981' : '#d9af56', color: '#000', border: 'none', padding: '8px 16px', borderRadius: '6px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s', width: '100%' }}
+                      >
+                        {copiedReferralLink ? 'Copied!' : 'Copy Link'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', marginTop: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
+                      <span style={{ color: '#9c93a8' }}>Referrals Completed:</span>
+                      <strong style={{ color: '#f43f5e', fontSize: '15px' }}>{successfulReferralsCount} / 1</strong>
+                    </div>
+                    <button 
+                      onClick={() => window.location.reload()}
+                      style={{ background: 'transparent', color: '#9c93a8', border: 'none', textDecoration: 'underline', fontSize: '11px', cursor: 'pointer' }}
+                    >
+                      I've referred someone, refresh status
+                    </button>
+                  </div>
+                </div>
+
+                {/* Option 2: Payment */}
+                <div style={{ 
+                  flex: '1 1 350px', 
+                  minWidth: '280px',
+                  background: 'rgba(255, 255, 255, 0.03)', 
+                  border: '1px solid rgba(217, 175, 86, 0.15)', 
+                  borderRadius: '16px', 
+                  padding: '28px', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  justifyContent: 'space-between',
+                  boxShadow: '0 4px 25px rgba(217, 175, 86, 0.05)'
+                }}>
+                  <div>
+                    <span style={{ fontSize: '11px', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase', color: '#10b981', display: 'block', marginBottom: '8px' }}>Option B (Instant)</span>
+                    <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#ffffff', margin: '0 0 12px 0' }}>Instant Pay Unlock</h3>
+                    <p style={{ fontSize: '13px', color: '#9c93a8', lineHeight: '1.5', margin: '0 0 20px 0' }}>
+                      Unlock your vault immediately by paying a one-time setup and account opening fee of ₹10.
+                    </p>
+
+                    <div style={{ background: 'rgba(16, 185, 129, 0.04)', padding: '20px 15px', borderRadius: '10px', border: '1px solid rgba(16, 185, 129, 0.15)', textAlign: 'center', marginBottom: '20px' }}>
+                      <span style={{ display: 'block', fontSize: '10px', color: '#9c93a8', textTransform: 'uppercase', marginBottom: '4px', letterSpacing: '1px' }}>Account Opening Fee</span>
+                      <strong style={{ fontSize: '28px', color: '#10b981', display: 'block' }}>₹10</strong>
+                      <span style={{ fontSize: '10px', color: '#9c93a8', display: 'block', marginTop: '4px' }}>Secured payment via Razorpay</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <RazorpayButton 
+                      amount={10} 
+                      type="unlock" 
+                      onSuccess={(verifyResult) => {
+                        if (verifyResult.isUnlocked || verifyResult.success) {
+                          setIsUnlocked(true);
+                          // Re-sync with backend to be absolutely sure
+                          fetch(`${VITE_BACKEND_URL}/api/auth/validate`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ email: user.email })
+                          })
+                            .then(r => r.json())
+                            .then(data => {
+                              if (data.valid && data.isUnlocked) {
+                                setIsUnlocked(true);
+                              }
+                            });
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', fontSize: '13px', color: '#ffffff' }}>
-                <span style={{ color: '#9c93a8' }}>Referrals Completed:</span>
-                <strong style={{ color: '#f43f5e', fontSize: '16px' }}>{successfulReferralsCount} / 1</strong>
-              </div>
-              
-              <button 
-                onClick={() => window.location.reload()}
-                style={{ marginTop: '30px', background: 'transparent', color: '#9c93a8', border: 'none', textDecoration: 'underline', fontSize: '12px', cursor: 'pointer' }}
-              >
-                I've referred someone, refresh status
-              </button>
             </div>
           </div>
         </div>
@@ -3669,7 +3851,8 @@ function App() {
               <div className="tab-pane-view profile-view animate-fade-in">
                 <div className="profile-dashboard-layout">
                   {/* Left Column: Shield/Badge/Status Card */}
-                  {currentKycStatus === 'Verified' ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    {currentKycStatus === 'Verified' ? (
                     <div className="profile-security-badge-card">
                       <div className="security-icon-shield"><Shield size={42} className="shield-glow" /></div>
                       <h3>Verified Vault Account</h3>
@@ -3735,9 +3918,44 @@ function App() {
                       </div>
                     </div>
                   )}
+                  
+                  {/* Danger Zone Card */}
+                  <div className="profile-security-badge-card" style={{ 
+                    marginTop: '0px', 
+                    background: 'rgba(220, 38, 38, 0.03)', 
+                    borderColor: 'rgba(220, 38, 38, 0.2)',
+                    padding: '24px',
+                    borderRadius: '16px',
+                    border: '1px solid rgba(220, 38, 38, 0.2)'
+                  }}>
+                    <h3 style={{ color: '#ef4444', fontSize: '16px', margin: '0 0 8px 0', fontWeight: 800 }}>⚠️ Danger Zone</h3>
+                    <p className="profile-desc-p" style={{ margin: '0 0 16px 0', fontSize: '13px' }}>
+                      Permanently delete your account and all associated trading data. This action is irreversible.
+                    </p>
+                    <button 
+                      type="button" 
+                      onClick={handleDeleteAccount}
+                      style={{ 
+                        width: '100%', 
+                        background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)', 
+                        border: 'none', 
+                        color: '#ffffff', 
+                        padding: '12px', 
+                        borderRadius: '8px', 
+                        fontWeight: 700, 
+                        fontSize: '13px', 
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        boxShadow: '0 4px 12px rgba(220, 38, 38, 0.2)'
+                      }}
+                    >
+                      Delete Total Account
+                    </button>
+                  </div>
+                  </div>
 
                   {/* Right Column: Settings or Upload widget */}
-                  {currentKycStatus === 'Verified' || currentKycStatus === 'Submitted' ? (
+                {currentKycStatus === 'Verified' || currentKycStatus === 'Submitted' ? (
                     <div className="profile-details-settings-card">
                       <h3>Account Settings</h3>
                       <div className="profile-settings-grid">
@@ -3759,9 +3977,11 @@ function App() {
                         </div>
                       </div>
 
-                      {currentKycStatus === 'Submitted' && cRecord.kycDocument && (
+                      {(currentKycStatus === 'Submitted' || currentKycStatus === 'Verified') && cRecord.kycDocument && (
                         <div style={{ marginTop: '20px', borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: '20px' }}>
-                          <h4 style={{ fontSize: '13px', color: '#ffffff', marginBottom: '12px', fontWeight: 700 }}>Pending Document Details</h4>
+                          <h4 style={{ fontSize: '13px', color: '#ffffff', marginBottom: '12px', fontWeight: 700 }}>
+                            {currentKycStatus === 'Verified' ? 'Verified Document Details' : 'Pending Document Details'}
+                          </h4>
                           <div className="kyc-file-preview" style={{ marginTop: 0 }}>
                             <div className="kyc-file-details">
                               <FileText size={20} className="kyc-upload-icon" style={{ margin: 0 }} />
@@ -3770,7 +3990,29 @@ function App() {
                                 <span className="kyc-file-size">{cRecord.kycDocument.type} • {cRecord.kycDocument.fileSize} • Uploaded at {cRecord.kycDocument.uploadedAt}</span>
                               </div>
                             </div>
-                            <span style={{ fontSize: '11px', color: '#f59e0b', fontWeight: 800 }}>PENDING REVIEW</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <span style={{ fontSize: '11px', color: currentKycStatus === 'Verified' ? '#10b981' : '#f59e0b', fontWeight: 800 }}>
+                                {currentKycStatus === 'Verified' ? 'VERIFIED' : 'PENDING REVIEW'}
+                              </span>
+                              <button 
+                                type="button"
+                                onClick={handleKycDelete}
+                                style={{
+                                  background: 'transparent',
+                                  border: 'none',
+                                  color: '#ef4444',
+                                  cursor: 'pointer',
+                                  padding: '4px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  transition: 'color 0.2s',
+                                }}
+                                title="Delete document"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
                           </div>
                         </div>
                       )}
