@@ -471,6 +471,7 @@ function App() {
   const [successfulReferralsCount, setSuccessfulReferralsCount] = useState(0);
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [referralsList, setReferralsList] = useState([]);
+  const [realtimeWinners, setRealtimeWinners] = useState([]);
   
   // --- Live Portfolio Balance & Holdings State ---
   const [walletBalance, setWalletBalance] = useState(0); // Available Cash in Rupees
@@ -995,8 +996,16 @@ function App() {
     }
   }, [user]);
 
-
-
+  useEffect(() => {
+    fetch(`${VITE_BACKEND_URL}/api/contest/leaderboard`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.leaderboard) {
+          setRealtimeWinners(data.leaderboard);
+        }
+      })
+      .catch(err => console.error("Error fetching homepage leaderboard:", err));
+  }, []);
 
   // Simulator removed to prevent dummy data generation
 
@@ -5352,22 +5361,34 @@ function App() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.04)' }}>
                   <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, #d9af56, #a67c1e)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontWeight: '800', fontSize: '20px' }}>🥇</div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: '700', color: '#fff' }}>Rohan Sharma</div>
-                    <div style={{ fontSize: '12px', color: '#9c93a8' }}>Success Rate: 84.2% (₹1,00,000 Cash Winner)</div>
+                    <div style={{ fontWeight: '700', color: '#fff' }}>{realtimeWinners[0]?.name || 'Position Open'}</div>
+                    <div style={{ fontSize: '12px', color: '#9c93a8' }}>
+                      {realtimeWinners[0] 
+                        ? `Success Rate: ${realtimeWinners[0].successRate}% (₹1,00,000 Cash Winner)` 
+                        : 'Join the contest to claim this rank!'}
+                    </div>
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.04)' }}>
                   <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, #c0c0c0, #7a7a7a)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontWeight: '800', fontSize: '20px' }}>🥈</div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: '700', color: '#fff' }}>Ananya Iyer</div>
-                    <div style={{ fontSize: '12px', color: '#9c93a8' }}>Success Rate: 78.5% (₹50,000 Cash Winner)</div>
+                    <div style={{ fontWeight: '700', color: '#fff' }}>{realtimeWinners[1]?.name || 'Position Open'}</div>
+                    <div style={{ fontSize: '12px', color: '#9c93a8' }}>
+                      {realtimeWinners[1] 
+                        ? `Success Rate: ${realtimeWinners[1].successRate}% (₹50,000 Cash Winner)` 
+                        : 'Join the contest to claim this rank!'}
+                    </div>
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.04)' }}>
                   <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, #cd7f32, #8c4c1a)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontWeight: '800', fontSize: '20px' }}>🥉</div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: '700', color: '#fff' }}>Kabir Mehta</div>
-                    <div style={{ fontSize: '12px', color: '#9c93a8' }}>Success Rate: 71.3% (₹25,000 Cash Winner)</div>
+                    <div style={{ fontWeight: '700', color: '#fff' }}>{realtimeWinners[2]?.name || 'Position Open'}</div>
+                    <div style={{ fontSize: '12px', color: '#9c93a8' }}>
+                      {realtimeWinners[2] 
+                        ? `Success Rate: ${realtimeWinners[2].successRate}% (₹25,000 Cash Winner)` 
+                        : 'Join the contest to claim this rank!'}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -5382,22 +5403,34 @@ function App() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.04)' }}>
                   <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, #a855f7, #6c23b5)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '800', fontSize: '16px' }}>💻</div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: '700', color: '#fff' }}>Vikram Malhotra</div>
-                    <div style={{ fontSize: '12px', color: '#9c93a8' }}>Success Rate: 90.0% (Gaming Laptop Winner)</div>
+                    <div style={{ fontWeight: '700', color: '#fff' }}>{realtimeWinners[3]?.name || 'Position Open'}</div>
+                    <div style={{ fontSize: '12px', color: '#9c93a8' }}>
+                      {realtimeWinners[3] 
+                        ? `Success Rate: ${realtimeWinners[3].successRate}% (Gaming Laptop Winner)` 
+                        : 'Join the contest to claim this rank!'}
+                    </div>
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.04)' }}>
                   <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, #a855f7, #6c23b5)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '800', fontSize: '16px' }}>📱</div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: '700', color: '#fff' }}>Pooja Patel</div>
-                    <div style={{ fontSize: '12px', color: '#9c93a8' }}>Success Rate: 80.0% (Smart Mobile Winner)</div>
+                    <div style={{ fontWeight: '700', color: '#fff' }}>{realtimeWinners[4]?.name || 'Position Open'}</div>
+                    <div style={{ fontSize: '12px', color: '#9c93a8' }}>
+                      {realtimeWinners[4] 
+                        ? `Success Rate: ${realtimeWinners[4].successRate}% (Smart Mobile Winner)` 
+                        : 'Join the contest to claim this rank!'}
+                    </div>
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.04)' }}>
                   <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, #a855f7, #6c23b5)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '800', fontSize: '16px' }}>⌚</div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: '700', color: '#fff' }}>Aarav Gupta</div>
-                    <div style={{ fontSize: '12px', color: '#9c93a8' }}>Success Rate: 70.0% (Smart Watch Winner)</div>
+                    <div style={{ fontWeight: '700', color: '#fff' }}>{realtimeWinners[5]?.name || 'Position Open'}</div>
+                    <div style={{ fontSize: '12px', color: '#9c93a8' }}>
+                      {realtimeWinners[5] 
+                        ? `Success Rate: ${realtimeWinners[5].successRate}% (Smart Watch Winner)` 
+                        : 'Join the contest to claim this rank!'}
+                    </div>
                   </div>
                 </div>
               </div>
