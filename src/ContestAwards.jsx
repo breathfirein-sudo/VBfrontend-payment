@@ -26,6 +26,7 @@ const ContestAwards = ({ user, rates, walletBalance, onTradeRedirect }) => {
   const [registered, setRegistered] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [activePrizeTab, setActivePrizeTab] = useState('monthly');
   
   const socketRef = useRef(null);
 
@@ -167,44 +168,109 @@ const ContestAwards = ({ user, rates, walletBalance, onTradeRedirect }) => {
       
       {/* 1. Public Info & Prizes Grid */}
       <div>
-        <h3 className="prize-section-title">
-          <Trophy size={20} color="#d9af56" /> Annual Contest Rewards Pool
-        </h3>
-        <div className="prize-cards-container">
-          
-          <div className="prize-card gold-border">
-            <span className="prize-badge">🥇</span>
-            <div className="prize-title">1st Prize Winner</div>
-            <div className="prize-reward gold-text">₹1,00,000</div>
-            <div className="prize-requirement">Around 80% Success Rate</div>
-            <div style={{ fontSize: '11px', color: '#9c93a8', marginTop: '8px' }}>~292 profitable trades out of 365</div>
+        <div className="prize-header-container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+          <h3 className="prize-section-title" style={{ margin: 0 }}>
+            <Trophy size={20} color="#d9af56" /> Contest Rewards Pool
+          </h3>
+          <div className="contest-prize-tabs" style={{ display: 'flex', gap: '8px', background: 'rgba(255,255,255,0.05)', padding: '4px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <button 
+              type="button"
+              onClick={() => setActivePrizeTab('monthly')} 
+              style={{ 
+                padding: '6px 16px', 
+                borderRadius: '6px', 
+                border: 'none', 
+                background: activePrizeTab === 'monthly' ? '#2962ff' : 'transparent', 
+                color: '#fff', 
+                cursor: 'pointer',
+                fontWeight: '600',
+                fontSize: '13px',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              📅 Monthly Contest
+            </button>
+            <button 
+              type="button"
+              onClick={() => setActivePrizeTab('weekly')} 
+              style={{ 
+                padding: '6px 16px', 
+                borderRadius: '6px', 
+                border: 'none', 
+                background: activePrizeTab === 'weekly' ? '#2962ff' : 'transparent', 
+                color: '#fff', 
+                cursor: 'pointer',
+                fontWeight: '600',
+                fontSize: '13px',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              ⚡ Weekly Contest
+            </button>
           </div>
-
-          <div className="prize-card">
-            <span className="prize-badge">🥈</span>
-            <div className="prize-title">2nd Prize Winner</div>
-            <div className="prize-reward">₹50,000</div>
-            <div className="prize-requirement">Around 70% Success Rate</div>
-            <div style={{ fontSize: '11px', color: '#9c93a8', marginTop: '8px' }}>~255 profitable trades out of 365</div>
-          </div>
-
-          <div className="prize-card">
-            <span className="prize-badge">🥉</span>
-            <div className="prize-title">3rd Prize Winner</div>
-            <div className="prize-reward">₹25,000</div>
-            <div className="prize-requirement">Around 60% Success Rate</div>
-            <div style={{ fontSize: '11px', color: '#9c93a8', marginTop: '8px' }}>~219 profitable trades out of 365</div>
-          </div>
-
         </div>
+
+        {activePrizeTab === 'monthly' ? (
+          <div className="prize-cards-container">
+            <div className="prize-card gold-border">
+              <span className="prize-badge">🥇</span>
+              <div className="prize-title">1st Prize Winner</div>
+              <div className="prize-reward gold-text">₹1,00,000</div>
+              <div className="prize-requirement">Around 80% Success Rate</div>
+              <div style={{ fontSize: '11px', color: '#9c93a8', marginTop: '8px' }}>~24 profitable trades out of 30</div>
+            </div>
+
+            <div className="prize-card">
+              <span className="prize-badge">🥈</span>
+              <div className="prize-title">2nd Prize Winner</div>
+              <div className="prize-reward">₹50,000</div>
+              <div className="prize-requirement">Around 70% Success Rate</div>
+              <div style={{ fontSize: '11px', color: '#9c93a8', marginTop: '8px' }}>~21 profitable trades out of 30</div>
+            </div>
+
+            <div className="prize-card">
+              <span className="prize-badge">🥉</span>
+              <div className="prize-title">3rd Prize Winner</div>
+              <div className="prize-reward">₹25,000</div>
+              <div className="prize-requirement">Around 60% Success Rate</div>
+              <div style={{ fontSize: '11px', color: '#9c93a8', marginTop: '8px' }}>~18 profitable trades out of 30</div>
+            </div>
+          </div>
+        ) : (
+          <div className="prize-cards-container">
+            <div className="prize-card gold-border">
+              <span className="prize-badge">💻</span>
+              <div className="prize-title">1st Prize Winner</div>
+              <div className="prize-reward gold-text">Gaming Laptop</div>
+              <div className="prize-requirement">Around 80% Success Rate</div>
+              <div style={{ fontSize: '11px', color: '#9c93a8', marginTop: '8px' }}>~8 profitable trades out of 10</div>
+            </div>
+
+            <div className="prize-card">
+              <span className="prize-badge">📱</span>
+              <div className="prize-title">2nd Prize Winner</div>
+              <div className="prize-reward">Smart Mobile</div>
+              <div className="prize-requirement">Around 70% Success Rate</div>
+              <div style={{ fontSize: '11px', color: '#9c93a8', marginTop: '8px' }}>~7 profitable trades out of 10</div>
+            </div>
+
+            <div className="prize-card">
+              <span className="prize-badge">⌚</span>
+              <div className="prize-title">3rd Prize Winner</div>
+              <div className="prize-reward">Smart Watch</div>
+              <div className="prize-requirement">Around 60% Success Rate</div>
+              <div style={{ fontSize: '11px', color: '#9c93a8', marginTop: '8px' }}>~6 profitable trades out of 10</div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 2. Registration Overlay OR User Progress Dashboard */}
       {!registered ? (
         <div className="registration-cta-card">
-          <h2>Join the Annual Paper Trading Tournament</h2>
+          <h2>Join the Paper Trading Tournament</h2>
           <p>
-            Prove your trading prowess. Complete a minimum of 365 trades throughout the year. Secure a success rate of 60% or higher and become eligible for cash awards of up to ₹1,00,000 (1 Lakh).
+            Prove your trading prowess. Secure a success rate of 60% or higher and become eligible for weekly prizes like gaming laptops & smart mobiles, or monthly cash awards of up to ₹1,00,000!
           </p>
           <button 
             type="button" 

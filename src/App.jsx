@@ -40,7 +40,8 @@ import {
   AlertTriangle,
   Eye,
   EyeOff,
-  Menu
+  Menu,
+  Home
 } from 'lucide-react';
 import heroGoldOre from './assets/hero_gold_ore.png';
 import './App.css';
@@ -1544,7 +1545,7 @@ function App() {
       <div id="root" className="dashboard-page-view admin-dashboard animate-fade-in" style={{ background: '#0e041b', color: '#ffffff', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
         {/* Admin Header */}
         <header className="header" style={{ borderBottom: '1px solid rgba(217, 175, 86, 0.15)', background: '#120524' }}>
-          <div className="container nav-container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 20px' }}>
+          <div className="container admin-header-nav">
             <div className="logo-section" onClick={() => setView('home')} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
               <div>
                 <InvesthourLogoText customStyle={{ fontSize: '20px', fontWeight: '800', color: '#ffffff', display: 'block' }} />
@@ -1552,7 +1553,7 @@ function App() {
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+            <div className="admin-header-right">
               <div className="admin-status-badge" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(244, 63, 94, 0.1)', padding: '6px 12px', borderRadius: '20px', border: '1px solid rgba(244, 63, 94, 0.2)' }}>
                 <span className="pulse-dot" style={{ width: '8px', height: '8px', background: '#f43f5e', borderRadius: '50%', display: 'inline-block', boxShadow: '0 0 8px #f43f5e' }}></span>
                 <span style={{ fontSize: '12px', color: '#f43f5e', fontWeight: 600 }}>LIVE TRACKING</span>
@@ -1667,7 +1668,7 @@ function App() {
           </div>
 
           {/* Admin Tabs Toggle */}
-          <div style={{ display: 'flex', gap: '15px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '12px', marginTop: '10px' }}>
+          <div className="admin-tabs-toggle">
             <button 
               type="button"
               onClick={() => setAdminTab('clients')}
@@ -1744,10 +1745,10 @@ function App() {
 
           {/* Main Content Workspace Split */}
           {adminTab === 'clients' && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '24px' }}>
+            <div className="admin-grid-layout">
             
             {/* Left Side: Client Roster list (7 Cols) */}
-            <div style={{ gridColumn: 'span 7', background: '#120524', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div className="admin-col-7" style={{ background: '#120524', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <h2 style={{ fontSize: '18px', fontWeight: '800', color: '#ffffff', margin: 0 }}>Registered Client Directory</h2>
@@ -1990,7 +1991,7 @@ function App() {
             </div>
 
             {/* Right Side: Visual Inspector Pane (5 Cols) */}
-            <div style={{ gridColumn: 'span 5', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <div className="admin-col-5" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
               {!selectedClientId ? (
                 <div style={{ background: '#120524', border: '1px dashed rgba(255, 255, 255, 0.1)', borderRadius: '16px', padding: '40px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', minHeight: '400px' }}>
                   <p style={{ color: '#9c93a8', textAlign: 'center', fontSize: '14px', lineHeight: '1.6' }}>Select <strong>"Inspect"</strong> on any client from the list<br/>to view their vault details.</p>
@@ -2022,7 +2023,7 @@ function App() {
                       </strong>
                     </div>
                     
-                    <div style={{ display: 'flex', gap: '8px' }}>
+                    <div className="admin-kyc-actions">
                       {inspectedClient.kycStatus !== 'Verified' && (
                         <button 
                           onClick={async () => {
@@ -2112,7 +2113,7 @@ function App() {
                   {inspectedClient.kycDocument ? (
                     <div style={{ marginTop: '8px', borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '10px' }}>
                       <span style={{ fontSize: '11px', color: '#9c93a8', display: 'block', marginBottom: '6px' }}>Uploaded Verification File:</span>
-                      <div className="kyc-file-preview" style={{ marginTop: 0, padding: '10px 12px', background: 'rgba(0,0,0,0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div className="kyc-file-preview">
                         <div className="kyc-file-details">
                           <FileText size={16} className="kyc-upload-icon" style={{ margin: 0 }} />
                           <div className="kyc-file-info" style={{ textAlign: 'left' }}>
@@ -2120,7 +2121,7 @@ function App() {
                             <span className="kyc-file-size" style={{ fontSize: '10px', color: '#9c93a8' }}>{inspectedClient.kycDocument.type} • {inspectedClient.kycDocument.uploadedAt}</span>
                           </div>
                         </div>
-                        <div style={{ display: 'flex', gap: '6px' }}>
+                        <div className="admin-kyc-file-actions">
                           <button 
                             onClick={() => {
                               if (inspectedClient.kycDocument.fileData) {
@@ -2400,8 +2401,8 @@ function App() {
                 <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   <h4 style={{ fontSize: '12px', color: '#9c93a8', textTransform: 'uppercase', letterSpacing: '0.5px', margin: 0 }}>Wallet Vault Ledger Adjuster</h4>
                   
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    <div style={{ display: 'flex', flex: 1, gap: '6px' }}>
+                  <div className="admin-ledger-adjuster-row">
+                    <div className="admin-ledger-adjuster-group">
                       <input 
                         type="number" 
                         placeholder="Amt (₹)" 
@@ -2443,7 +2444,7 @@ function App() {
                       </button>
                     </div>
 
-                    <div style={{ display: 'flex', flex: 1, gap: '6px' }}>
+                    <div className="admin-ledger-adjuster-group">
                       <input 
                         type="number" 
                         placeholder="Amt (₹)" 
@@ -2527,9 +2528,9 @@ function App() {
 
           {/* Contest Management Tab content */}
           {adminTab === 'contest' && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '24px' }}>
+            <div className="admin-grid-layout">
               {/* Left Column: Contest Roster */}
-              <div style={{ gridColumn: 'span 7', background: '#120524', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div className="admin-col-7" style={{ background: '#120524', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <h2 style={{ fontSize: '18px', fontWeight: '800', color: '#ffffff', margin: 0 }}>Tournament Roster Manager</h2>
@@ -3030,20 +3031,7 @@ function App() {
                                 </div>
                               </td>
                               <td style={{ padding: '14px 10px' }}>
-                                <span style={{ fontSize: '12px', color: '#d9af56', fontWeight: 600, display: 'block' }}>{methodLabel}</span>
-                                {wd.upiId && (
-                                  <div style={{ fontSize: '11px', color: '#9c93a8', marginTop: '4px', fontFamily: 'monospace' }}>
-                                    UPI: {wd.upiId}
-                                  </div>
-                                )}
-                                {wd.bankAccount && (
-                                  <div style={{ fontSize: '11px', color: '#9c93a8', marginTop: '4px', lineHeight: '1.4' }}>
-                                    <span style={{ fontFamily: 'monospace', display: 'block' }}>A/C: {wd.bankAccount}</span>
-                                    <span style={{ display: 'block', fontSize: '10px' }}>IFSC: {wd.ifsc}</span>
-                                    <span style={{ display: 'block', fontSize: '10px' }}>Bank: {wd.bankName}</span>
-                                    <span style={{ display: 'block', fontSize: '10px' }}>Holder: {wd.accountHolder}</span>
-                                  </div>
-                                )}
+                                <span style={{ fontSize: '12px', color: '#d9af56', fontWeight: 600 }}>{methodLabel}</span>
                               </td>
                               <td style={{ padding: '14px 10px' }}>
                                 <span style={{ fontSize: '11px', color: '#9c93a8', fontFamily: 'monospace' }}>{wd.orderId}</span>
@@ -3065,7 +3053,7 @@ function App() {
                               </td>
                               <td style={{ padding: '14px 10px', textAlign: 'right' }}>
                                 {isPending ? (
-                                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                  <div className="admin-withdrawal-actions">
                                     <button
                                       type="button"
                                       onClick={async () => {
@@ -3252,6 +3240,12 @@ function App() {
             </button>
             
             <nav className={`nav-menu dashboard-nav ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
+              <button 
+                className="dash-nav-item"
+                onClick={() => { setView('home'); setIsMobileMenuOpen(false); }}
+              >
+                <Home size={16} /> Home
+              </button>
               <button 
                 className={`dash-nav-item ${dashTab === 'portfolio' ? 'active' : ''}`}
                 onClick={() => { setDashTab('portfolio'); setIsMobileMenuOpen(false); }}
@@ -4485,6 +4479,12 @@ function App() {
                 <nav className={`nav-menu dashboard-nav ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
                   <button 
                     className="dash-nav-item"
+                    onClick={() => { setView('home'); setIsMobileMenuOpen(false); }}
+                  >
+                    <Home size={16} /> Home
+                  </button>
+                  <button 
+                    className="dash-nav-item"
                     onClick={() => { setView('dashboard'); setDashTab('portfolio'); setIsMobileMenuOpen(false); }}
                   >
                     <Briefcase size={16} /> Portfolio
@@ -4595,6 +4595,12 @@ function App() {
                   {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
                 </button>
                 <nav className={`nav-menu dashboard-nav ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
+                  <button 
+                    className="dash-nav-item"
+                    onClick={() => { setView('home'); setIsMobileMenuOpen(false); }}
+                  >
+                    <Home size={16} /> Home
+                  </button>
                   <button 
                     className="dash-nav-item"
                     onClick={() => { setView('dashboard'); setDashTab('portfolio'); setIsMobileMenuOpen(false); }}
@@ -4816,6 +4822,12 @@ function App() {
               <nav className={`nav-menu dashboard-nav ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
                 <button 
                   className="dash-nav-item"
+                  onClick={() => { setView('home'); setIsMobileMenuOpen(false); }}
+                >
+                  <Home size={16} /> Home
+                </button>
+                <button 
+                  className="dash-nav-item"
                   onClick={() => { setView('dashboard'); setDashTab('portfolio'); setIsMobileMenuOpen(false); }}
                 >
                   <Briefcase size={16} /> Portfolio
@@ -4924,29 +4936,85 @@ function App() {
             {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
           
-          <nav className={`nav-menu ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
-            <a href="#home" className="nav-item active" onClick={(e) => { e.preventDefault(); setIsMobileMenuOpen(false); }}>Home</a>
-            <a href="#contest" className="nav-item" onClick={(e) => { e.preventDefault(); setView('contest-awards'); setIsMobileMenuOpen(false); }}>Contest Awards</a>
-            <a href="#about" className="nav-item" onClick={(e) => { e.preventDefault(); setView('about'); setIsMobileMenuOpen(false); }}>Explore Elements</a>
-            <a href="#referral" className="nav-item" onClick={(e) => { e.preventDefault(); setView('referral-program'); setIsMobileMenuOpen(false); }}>Referral Program</a>
-            {user && (
-              <div className="mobile-user-badge">
-                <div className="user-info-text" onClick={() => { setView('dashboard'); setIsMobileMenuOpen(false); }} style={{ cursor: 'pointer' }}>
-                  <span className="user-email-text">{user.email}</span>
-                  <span className="kyc-badge">GO TO PORTFOLIO</span>
-                </div>
-                <button type="button" className="btn-sec-signout" onClick={handleSignOut} title="Secure Sign Out">
-                  <LogOut size={16} /> Sign Out
-                </button>
-              </div>
-            )}
-          </nav>
           {user ? (
-            <div className="dash-user-badge" style={{ cursor: 'pointer' }} onClick={() => setView('dashboard')}>
+            <nav className={`nav-menu dashboard-nav ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
+              <button 
+                className="dash-nav-item active"
+                onClick={() => { setView('home'); setIsMobileMenuOpen(false); }}
+              >
+                <Home size={16} /> Home
+              </button>
+              <button 
+                className="dash-nav-item"
+                onClick={() => { setView('dashboard'); setDashTab('portfolio'); setIsMobileMenuOpen(false); }}
+              >
+                <Briefcase size={16} /> Portfolio
+              </button>
+              <button 
+                className="dash-nav-item"
+                onClick={() => { setView('dashboard'); setDashTab('trade'); setIsMobileMenuOpen(false); }}
+              >
+                <ArrowRightLeft size={16} /> Trade
+              </button>
+              <button 
+                className="dash-nav-item"
+                onClick={() => { setView('dashboard'); setDashTab('wallet'); setIsMobileMenuOpen(false); }}
+              >
+                <Wallet size={16} /> Wallet
+              </button>
+              <button 
+                className="dash-nav-item"
+                onClick={() => { setView('dashboard'); setDashTab('contest'); setIsMobileMenuOpen(false); }}
+              >
+                <Star size={16} /> Contest
+              </button>
+              <button 
+                className="dash-nav-item"
+                onClick={() => { setView('about'); setIsMobileMenuOpen(false); }}
+              >
+                <Gem size={16} /> Explore Elements
+              </button>
+              <button 
+                className="dash-nav-item"
+                onClick={() => { setView('dashboard'); setDashTab('referral'); setIsMobileMenuOpen(false); }}
+              >
+                <Gift size={16} /> Referral Program
+              </button>
+              <button 
+                className="dash-nav-item"
+                onClick={() => { setView('dashboard'); setDashTab('profile'); setIsMobileMenuOpen(false); }}
+              >
+                <User size={16} /> Vault Profile
+              </button>
+              {user && (
+                <div className="mobile-user-badge">
+                  <div className="user-info-text">
+                    <span className="user-email-text">{user.email}</span>
+                    <span className="kyc-badge">{user.email === 'sandeepkumar.pikili@vrpigroup.co.in' ? 'ADMIN' : 'KYC SECURED'}</span>
+                  </div>
+                  <button type="button" className="btn-sec-signout" onClick={handleSignOut} title="Secure Sign Out">
+                    <LogOut size={16} /> Sign Out
+                  </button>
+                </div>
+              )}
+            </nav>
+          ) : (
+            <nav className={`nav-menu ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
+              <a href="#home" className="nav-item active" onClick={(e) => { e.preventDefault(); setIsMobileMenuOpen(false); }}>Home</a>
+              <a href="#contest" className="nav-item" onClick={(e) => { e.preventDefault(); setView('contest-awards'); setIsMobileMenuOpen(false); }}>Contest Awards</a>
+              <a href="#about" className="nav-item" onClick={(e) => { e.preventDefault(); setView('about'); setIsMobileMenuOpen(false); }}>Explore Elements</a>
+              <a href="#referral" className="nav-item" onClick={(e) => { e.preventDefault(); setView('referral-program'); setIsMobileMenuOpen(false); }}>Referral Program</a>
+            </nav>
+          )}
+          {user ? (
+            <div className="dash-user-badge">
               <div className="user-info-text">
                 <span className="user-email-text">{user.email}</span>
                 <span className="kyc-badge">{user.email === 'sandeepkumar.pikili@vrpigroup.co.in' ? 'ADMIN' : 'KYC SECURED'}</span>
               </div>
+              <button className="btn-sec-signout" onClick={handleSignOut} title="Secure Sign Out">
+                <LogOut size={16} />
+              </button>
             </div>
           ) : (
             <button type="button" className="btn-signin" onClick={() => setView('auth')}>Sign In / Sign Up</button>
@@ -4966,7 +5034,11 @@ function App() {
               <h1 className="hero-title">Burning a cigarette gives you ash, but investing the cigarette cost will give you the future</h1>
               <p className="hero-desc">Begin your wealth accumulation journey with 100% physically backed institutional-grade metals.</p>
               <div className="hero-actions">
-                <button type="button" className="btn-hero-primary" onClick={() => setView('auth')}>Proceed to Sign Up</button>
+                {!user ? (
+                  <button type="button" className="btn-hero-primary" onClick={() => setView('auth')}>Proceed to Sign Up</button>
+                ) : (
+                  <button type="button" className="btn-hero-primary" onClick={() => setView('dashboard')}>Go to Portfolio</button>
+                )}
               </div>
             </div>
             <div className="widget-column">
@@ -5015,6 +5087,134 @@ function App() {
           </div>
         </div>
       </main>
+
+      {/* Winners Hall of Fame Section */}
+      <section className="home-winners-section" style={{ padding: '80px 24px', background: '#0a0514', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="container" style={{ maxWidth: '1200px', margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: '50px' }}>
+            <span style={{ color: '#d9af56', fontSize: '13px', fontWeight: '800', letterSpacing: '2px', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>🏆 Hall of Fame</span>
+            <h2 style={{ fontSize: '32px', fontWeight: '800', color: '#fff', margin: 0, fontFamily: 'var(--font-title)' }}>Tournament Winners Circle</h2>
+            <p style={{ color: '#9c93a8', fontSize: '15px', maxWidth: '600px', margin: '12px auto 0', lineHeight: 1.6 }}>
+              Congratulations to our top-performing traders! These champions demonstrated superior market analysis, disciplined risk management, and exceptional success rates to secure the leaderboard's top positions.
+            </p>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }} className="grid-2col-winners">
+            
+            {/* Monthly Winners */}
+            <div style={{ background: 'linear-gradient(135deg, rgba(29,13,53,0.3) 0%, rgba(12,6,21,0.5) 100%)', border: '1px solid rgba(217,175,86,0.15)', borderRadius: '16px', padding: '30px' }}>
+              <h3 style={{ fontSize: '20px', fontWeight: '800', color: '#d9af56', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                📅 Monthly Contest Champions
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.04)' }}>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, #d9af56, #a67c1e)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontWeight: '800', fontSize: '20px' }}>🥇</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: '700', color: '#fff' }}>Rohan Sharma</div>
+                    <div style={{ fontSize: '12px', color: '#9c93a8' }}>Success Rate: 84.2% (₹1,00,000 Cash Winner)</div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.04)' }}>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, #c0c0c0, #7a7a7a)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontWeight: '800', fontSize: '20px' }}>🥈</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: '700', color: '#fff' }}>Ananya Iyer</div>
+                    <div style={{ fontSize: '12px', color: '#9c93a8' }}>Success Rate: 78.5% (₹50,000 Cash Winner)</div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.04)' }}>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, #cd7f32, #8c4c1a)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontWeight: '800', fontSize: '20px' }}>🥉</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: '700', color: '#fff' }}>Kabir Mehta</div>
+                    <div style={{ fontSize: '12px', color: '#9c93a8' }}>Success Rate: 71.3% (₹25,000 Cash Winner)</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Weekly Winners */}
+            <div style={{ background: 'linear-gradient(135deg, rgba(29,13,53,0.3) 0%, rgba(12,6,21,0.5) 100%)', border: '1px solid rgba(168,85,247,0.15)', borderRadius: '16px', padding: '30px' }}>
+              <h3 style={{ fontSize: '20px', fontWeight: '800', color: '#a855f7', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                ⚡ Weekly Contest Champions
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.04)' }}>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, #a855f7, #6c23b5)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '800', fontSize: '16px' }}>💻</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: '700', color: '#fff' }}>Vikram Malhotra</div>
+                    <div style={{ fontSize: '12px', color: '#9c93a8' }}>Success Rate: 90.0% (Gaming Laptop Winner)</div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.04)' }}>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, #a855f7, #6c23b5)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '800', fontSize: '16px' }}>📱</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: '700', color: '#fff' }}>Pooja Patel</div>
+                    <div style={{ fontSize: '12px', color: '#9c93a8' }}>Success Rate: 80.0% (Smart Mobile Winner)</div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.04)' }}>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, #a855f7, #6c23b5)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '800', fontSize: '16px' }}>⌚</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: '700', color: '#fff' }}>Aarav Gupta</div>
+                    <div style={{ fontSize: '12px', color: '#9c93a8' }}>Success Rate: 70.0% (Smart Watch Winner)</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* About Section */}
+      <section className="home-about-section" style={{ padding: '80px 24px', background: '#060309', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+        <div className="container" style={{ maxWidth: '1200px', margin: '0 auto' }}>
+          <div className="grid-2col-about" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '50px', alignItems: 'center' }}>
+            
+            {/* Left: Beautiful brand presentation */}
+            <div>
+              <span style={{ color: '#d9af56', fontSize: '13px', fontWeight: '800', letterSpacing: '2px', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>🔍 About Investhour</span>
+              <h2 style={{ fontSize: '36px', fontWeight: '800', color: '#fff', margin: '0 0 16px 0', lineHeight: 1.2 }}>Accumulate Wealth, Learn Risk-Free</h2>
+              <p style={{ color: '#9c93a8', fontSize: '15px', lineHeight: 1.7, marginBottom: '20px' }}>
+                Investhour is a state-of-the-art financial simulation and precious metal vaulting portal designed to merge real-time financial literacy with physical asset building.
+              </p>
+              <p style={{ color: '#9c93a8', fontSize: '15px', lineHeight: 1.7, marginBottom: '24px' }}>
+                Our mission is to help individuals transition from risky speculation to structured wealth accumulation. By providing risk-free paper trading environments paired with actual rewards and premium physically-backed metal portfolios, we offer a comprehensive system to secure your financial future.
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }} className="about-grid-metrics">
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                  <div style={{ color: '#d9af56', fontWeight: 'bold', fontSize: '18px' }}>✓</div>
+                  <div>
+                    <h4 style={{ color: '#fff', margin: '0 0 4px 0', fontSize: '14px' }}>100% physically backed</h4>
+                    <p style={{ color: '#9c93a8', margin: 0, fontSize: '12px' }}>Real asset vault custody</p>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                  <div style={{ color: '#d9af56', fontWeight: 'bold', fontSize: '18px' }}>✓</div>
+                  <div>
+                    <h4 style={{ color: '#fff', margin: '0 0 4px 0', fontSize: '14px' }}>No Entry Fees</h4>
+                    <p style={{ color: '#9c93a8', margin: 0, fontSize: '12px' }}>Free weekly/monthly contests</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Security details */}
+            <div style={{ background: 'linear-gradient(145deg, #150a21 0%, #0c0515 100%)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '20px', padding: '40px', boxShadow: 'var(--shadow-purple-glow)' }}>
+              <h3 style={{ fontSize: '22px', fontWeight: '800', color: '#fff', marginBottom: '16px' }}>Secure Trading Infrastructure</h3>
+              <p style={{ color: '#9c93a8', fontSize: '14px', lineHeight: 1.6, marginBottom: '20px' }}>
+                We prioritize user vault security and transparent trade executions. Our backend maintains end-to-end encryption for client wallets, referral ledger updates, and automated contest rankings.
+              </p>
+              <ul style={{ color: '#9c93a8', fontSize: '13.5px', paddingLeft: '20px', lineHeight: 1.8, margin: 0, listStyleType: 'none' }}>
+                <li style={{ marginBottom: '8px' }}>🔒 SSL-encrypted communication channels</li>
+                <li style={{ marginBottom: '8px' }}>🏦 Institutional custodian vault partners</li>
+                <li style={{ marginBottom: '8px' }}>💼 Automated payout mechanisms via RazorpayX</li>
+                <li>📋 Clear, audited transaction ledgers and KYC compliance</li>
+              </ul>
+            </div>
+
+          </div>
+        </div>
+      </section>
 
       <button type="button" className="help-fab" onClick={() => setIsChatOpen(true)}><HelpCircle size={18} /><span>Help?</span></button>
 

@@ -70,7 +70,7 @@
 .lc-interval-menu {
   position: absolute;
   top: 100%;
-  left: -50px;
+  right: 0;
   background: #1e222d;
   border: 1px solid #2a2e39;
   border-radius: 6px;
