@@ -3928,43 +3928,12 @@ function App() {
                     </div>
                   )}
                   
-                  {/* Danger Zone Card */}
-                  <div className="profile-security-badge-card" style={{ 
-                    marginTop: '0px', 
-                    background: 'rgba(220, 38, 38, 0.03)', 
-                    borderColor: 'rgba(220, 38, 38, 0.2)',
-                    padding: '24px',
-                    borderRadius: '16px',
-                    border: '1px solid rgba(220, 38, 38, 0.2)'
-                  }}>
-                    <h3 style={{ color: '#ef4444', fontSize: '16px', margin: '0 0 8px 0', fontWeight: 800 }}>⚠️ Danger Zone</h3>
-                    <p className="profile-desc-p" style={{ margin: '0 0 16px 0', fontSize: '13px' }}>
-                      Permanently delete your account and all associated trading data. This action is irreversible.
-                    </p>
-                    <button 
-                      type="button" 
-                      onClick={handleDeleteAccount}
-                      style={{ 
-                        width: '100%', 
-                        background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)', 
-                        border: 'none', 
-                        color: '#ffffff', 
-                        padding: '12px', 
-                        borderRadius: '8px', 
-                        fontWeight: 700, 
-                        fontSize: '13px', 
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
-                        boxShadow: '0 4px 12px rgba(220, 38, 38, 0.2)'
-                      }}
-                    >
-                      Delete Total Account
-                    </button>
-                  </div>
+
                   </div>
 
                   {/* Right Column: Settings or Upload widget */}
-                {currentKycStatus === 'Verified' || currentKycStatus === 'Submitted' ? (
+                  <div className="profile-right-col" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    {currentKycStatus === 'Verified' || currentKycStatus === 'Submitted' ? (
                     <div className="profile-details-settings-card">
                       <h3>Account Settings</h3>
                       <div className="profile-settings-grid">
@@ -4145,6 +4114,42 @@ function App() {
                       </button>
                     </div>
                   )}
+
+                  {/* Danger Zone Card */}
+                  <div className="profile-security-badge-card" style={{ 
+                    marginTop: '0px', 
+                    background: 'rgba(220, 38, 38, 0.03)', 
+                    borderColor: 'rgba(220, 38, 38, 0.2)',
+                    padding: '24px',
+                    borderRadius: '16px',
+                    border: '1px solid rgba(220, 38, 38, 0.2)'
+                  }}>
+                    <h3 style={{ color: '#ef4444', fontSize: '16px', margin: '0 0 8px 0', fontWeight: 800 }}>⚠️ Danger Zone</h3>
+                    <p className="profile-desc-p" style={{ margin: '0 0 16px 0', fontSize: '13px' }}>
+                      Permanently delete your account and all associated trading data. This action is irreversible.
+                    </p>
+                    <button 
+                      type="button" 
+                      onClick={handleDeleteAccount}
+                      style={{ 
+                        width: '100%', 
+                        background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)', 
+                        border: 'none', 
+                        color: '#ffffff', 
+                        padding: '12px', 
+                        borderRadius: '8px', 
+                        fontWeight: 700, 
+                        fontSize: '13px', 
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        boxShadow: '0 4px 12px rgba(220, 38, 38, 0.2)'
+                      }}
+                    >
+                      Delete Total Account
+                    </button>
+                  </div>
+                </div>
+
                 </div>
               </div>
             );
