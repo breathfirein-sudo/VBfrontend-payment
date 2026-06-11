@@ -5037,7 +5037,7 @@ function App() {
                 {!user ? (
                   <button type="button" className="btn-hero-primary" onClick={() => setView('auth')}>Proceed to Sign Up</button>
                 ) : (
-                  <button type="button" className="btn-hero-primary" onClick={() => setView('dashboard')}>Go to Portfolio</button>
+                  <button type="button" className="btn-hero-primary" onClick={() => { setView('dashboard'); setDashTab('portfolio'); }}>Go to Portfolio</button>
                 )}
               </div>
             </div>
