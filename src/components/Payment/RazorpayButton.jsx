@@ -167,10 +167,11 @@ const RazorpayButton = ({ amount, type, onSuccess, onError, payoutDetails }) => 
           display: {
             blocks: {
               upi: {
-                name: "Pay via UPI",
+                name: "Pay via UPI QR",
                 instruments: [
                   {
-                    method: "upi"
+                    method: "upi",
+                    flows: ["qr"]
                   }
                 ]
               }
