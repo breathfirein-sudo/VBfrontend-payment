@@ -162,6 +162,24 @@ const RazorpayButton = ({ amount, type, onSuccess, onError, payoutDetails }) => 
         },
         theme: {
           color: '#10b981' // Matching Investhour's green theme
+        },
+        config: {
+          display: {
+            blocks: {
+              upi: {
+                name: "Pay via UPI",
+                instruments: [
+                  {
+                    method: "upi"
+                  }
+                ]
+              }
+            },
+            sequence: ["block.upi"],
+            preferences: {
+              show_default_blocks: false
+            }
+          }
         }
       };
 
