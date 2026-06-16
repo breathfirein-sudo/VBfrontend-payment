@@ -1,4 +1,5 @@
 .lc-widget-container {
+  position: relative;
   background-color: #0a0a0a;
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -239,9 +240,9 @@
 /* Trade Popup Styles */
 .lc-trade-popup {
   position: absolute;
-  top: 60px; /* Below the top bar */
+  top: 50%;
   left: 50%;
-  transform: translateX(-50%) translateY(-20px);
+  transform: translate(-50%, -50%) scale(0.9);
   background: rgba(20, 20, 25, 0.95);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -262,7 +263,7 @@
 .lc-trade-popup.show {
   opacity: 1;
   visibility: visible;
-  transform: translateX(-50%) translateY(0);
+  transform: translate(-50%, -50%) scale(1);
   pointer-events: auto;
 }
 
@@ -598,6 +599,21 @@
   padding-right: 4px;
   margin-bottom: 16px;
   min-height: 200px;
+  max-height: 320px;
+}
+.lc-mt-trade-list::-webkit-scrollbar {
+  width: 6px;
+}
+.lc-mt-trade-list::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 3px;
+}
+.lc-mt-trade-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+.lc-mt-trade-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 .lc-mt-trade-item {
   background: #000000;
@@ -722,4 +738,120 @@
     box-sizing: border-box;
   }
 }
+
+/* Dashboard container and glassmorphic stats cards */
+.lc-dashboard-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 16px;
+  background: #000000;
+  margin-top: auto;
+}
+
+.lc-dashboard-wallet {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(6, 182, 212, 0.05) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.05);
+}
+
+.lc-dash-label {
+  font-size: 11px;
+  color: #8e8e93;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.lc-dash-value.wallet {
+  font-size: 22px;
+  font-weight: 800;
+  color: #10b981;
+  text-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+  font-family: monospace;
+}
+
+.lc-dash-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.lc-dash-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  text-align: center;
+  transition: transform 0.2s, background-color 0.2s;
+}
+
+.lc-dash-card:hover {
+  background: rgba(255, 255, 255, 0.04);
+  transform: translateY(-1px);
+}
+
+.lc-dash-card.full-width {
+  grid-column: span 2;
+  flex-direction: row;
+  justify-content: space-between;
+  padding: 10px 14px;
+}
+
+.lc-dash-card.green-bg {
+  border-left: 3px solid #10b981;
+  background: rgba(16, 185, 129, 0.01);
+}
+
+.lc-dash-card.red-bg {
+  border-left: 3px solid #ef4444;
+  background: rgba(239, 68, 68, 0.01);
+}
+
+.lc-dash-num {
+  font-size: 16px;
+  font-weight: 800;
+  color: #ffffff;
+  font-family: monospace;
+}
+
+.lc-dash-num.win {
+  color: #10b981;
+}
+
+.lc-dash-num.loss {
+  color: #ef4444;
+}
+
+.lc-dash-lbl {
+  font-size: 10px;
+  color: #8e8e93;
+  text-transform: uppercase;
+}
+
+.lc-dash-val {
+  font-weight: 700;
+  font-family: monospace;
+  font-size: 13.5px;
+}
+
+.lc-dash-val.win {
+  color: #10b981;
+}
+
+.lc-dash-val.loss {
+  color: #ef4444;
+}
+
 

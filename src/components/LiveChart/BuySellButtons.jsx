@@ -15,10 +15,11 @@ const BuySellButtons = ({
   setRiskAmount,
   contestBalance,
   setContestBalance,
-  withdrawableBalance = 0
+  withdrawableBalance = 0,
+  walletBalance = 0,
+  setWalletBalance
 }) => {
-  const [loading, setLoading] = useState(false);
-  const [standardQuantity, setStandardQuantity] = useState('50');
+  const [loadingType, setLoadingType] = useState(null);
 
   const getAuthHeaders = async () => {
     const token = await getAuthToken(user);
@@ -35,7 +36,7 @@ const BuySellButtons = ({
       return;
     }
 
-    setLoading(true);
+    setLoadingType(type);
     try {
       const headers = await getAuthHeaders();
       
@@ -43,13 +44,13 @@ const BuySellButtons = ({
         const amt = 100;
         if (isNaN(amt) || amt <= 0) {
           alert('Please enter a valid risk amount.');
-          setLoading(false);
+          setLoadingType(null);
           return;
         }
 
         if (contestBalance < amt) {
           alert(`Insufficient contest balance! You only have ₹${contestBalance.toLocaleString()} remaining.`);
-          setLoading(false);
+          setLoadingType(null);
           return;
         }
 
@@ -71,22 +72,26 @@ const BuySellButtons = ({
         }
       } else {
         const amt = 100;
-        if (withdrawableBalance < amt) {
-          alert(`Insufficient withdrawable balance. You cannot trade with referral rewards. You need at least ₹${amt.toFixed(2)} in added funds but only have ₹${withdrawableBalance.toFixed(2)} withdrawable balance.`);
-          setLoading(false);
+
+        if (walletBalance < amt) {
+          alert(`Insufficient wallet balance! Placing this trade requires ₹${amt.toFixed(2)} but you only have ₹${walletBalance.toFixed(2)}.`);
+          setLoadingType(null);
           return;
         }
-        const qty = amt / currentPrice;
         
         // Standard paper trade with authentication scoping
         const backendUrl = import.meta.env.VITE_BACKEND_URL || (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:5000' : 'https://hour-60kr.onrender.com');
         const res = await axios.post(`${backendUrl}/api/` + type.toLowerCase(), {
           symbol,
           price: currentPrice,
-          quantity: qty,
+          investmentAmount: amt,
           interval
         }, headers);
         
+        if (setWalletBalance) {
+          setWalletBalance(prev => parseFloat((prev - amt).toFixed(2)));
+        }
+
         if (onTradeExecuted) {
           onTradeExecuted(res.data);
         }
@@ -95,7 +100,7 @@ const BuySellButtons = ({
       console.error('Trade failed:', error);
       alert(error.response?.data?.error || 'Trade failed to execute. Verify the backend service.');
     } finally {
-      setLoading(false);
+      setLoadingType(null);
     }
   };
 
@@ -142,8 +147,31 @@ const BuySellButtons = ({
       )}
       
       {!isContest && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', gap: '15px' }}>
           <span style={{ fontSize: '13px', color: '#ffffff', fontWeight: 'bold' }}>Standard Mode</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '12px', color: '#9c93a8' }}>Investment:</span>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <span style={{ position: 'absolute', left: '8px', color: '#9c93a8', fontSize: '12px' }}>₹</span>
+              <input 
+                type="number" 
+                value="100"
+                readOnly
+                style={{ 
+                  background: '#120524', 
+                  color: '#ffffff', 
+                  border: '1px solid rgba(255,255,255,0.1)', 
+                  borderRadius: '6px', 
+                  padding: '4px 8px 4px 18px', 
+                  width: '85px', 
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  cursor: 'not-allowed',
+                  opacity: 0.8
+                }}
+              />
+            </div>
+          </div>
         </div>
       )}
 
@@ -151,18 +179,18 @@ const BuySellButtons = ({
         <button 
           className="lc-btn-buy" 
           onClick={() => handleTrade('BUY')}
-          disabled={loading}
+          disabled={loadingType !== null}
           style={{ flex: 1, padding: '8px', borderRadius: '8px', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer' }}
         >
-          {loading ? 'Processing...' : 'Buy'}
+          {loadingType === 'BUY' ? 'Processing...' : 'Buy'}
         </button>
         <button 
           className="lc-btn-sell" 
           onClick={() => handleTrade('SELL')}
-          disabled={loading}
+          disabled={loadingType !== null}
           style={{ flex: 1, padding: '8px', borderRadius: '8px', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer' }}
         >
-          {loading ? 'Processing...' : 'Sell'}
+          {loadingType === 'SELL' ? 'Processing...' : 'Sell'}
         </button>
       </div>
     </div>

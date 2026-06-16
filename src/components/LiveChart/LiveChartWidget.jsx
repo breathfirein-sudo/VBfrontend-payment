@@ -13,7 +13,7 @@ const backendUrl = import.meta.env.VITE_BACKEND_URL || (typeof window !== 'undef
 const SOCKET_URL = backendUrl;
 const API_URL = `${backendUrl}/api`;
 
-const LiveChartWidget = ({ user, withdrawableBalance = 0 }) => {
+const LiveChartWidget = ({ user, withdrawableBalance = 0, walletBalance = 0, setWalletBalance }) => {
   const [symbol, setSymbol] = useState('TSLA');
   const [interval, setIntervalTime] = useState('1m');
   const [candles, setCandles] = useState([]);
@@ -68,11 +68,82 @@ const LiveChartWidget = ({ user, withdrawableBalance = 0 }) => {
     fetchUserData();
   }, [user, symbol]);
 
+  const symbolRef = useRef(symbol);
+  const userRef = useRef(user);
+
+  useEffect(() => {
+    symbolRef.current = symbol;
+  }, [symbol]);
+
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
+  // 1. Setup Socket connection and persistent event listeners once on mount
+  useEffect(() => {
+    console.log('Connecting to Socket.io server:', SOCKET_URL);
+    socketRef.current = io(SOCKET_URL);
+
+    socketRef.current.on('live_candle', (candle) => {
+      setCurrentPrice(candle.close);
+      setOhlc({ open: candle.open, high: candle.high, low: candle.low, close: candle.close, vol: candle.value });
+      
+      if (chartRef.current && lastCandleTimeRef.current) {
+        try {
+          if (candle.time >= lastCandleTimeRef.current) {
+            chartRef.current.updateCandle(
+              { time: candle.time, open: candle.open, high: candle.high, low: candle.low, close: candle.close },
+              { time: candle.time, value: candle.value, color: candle.close >= candle.open ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)' }
+            );
+            lastCandleTimeRef.current = candle.time;
+          }
+        } catch (e) {
+          console.warn('Chart update ignored:', e.message);
+        }
+      }
+    });
+
+    socketRef.current.on('trade_resolved', (trade) => {
+      const currentSym = symbolRef.current;
+      const currentUser = userRef.current;
+      if (currentUser && trade.user_email?.toLowerCase() === currentUser.email?.toLowerCase()) {
+        if (trade.symbol === currentSym && chartRef.current) {
+          chartRef.current.removePriceLine(trade.id);
+        }
+        setResolvedTrade(trade);
+        fetchUserData();
+        if (setWalletBalance && trade.balance_refund !== undefined) {
+          setWalletBalance(prev => parseFloat((prev + parseFloat(trade.balance_refund)).toFixed(2)));
+        }
+      }
+    });
+
+    socketRef.current.on('contest_trade_resolved', (trade) => {
+      const currentSym = symbolRef.current;
+      const currentUser = userRef.current;
+      if (currentUser && trade.user_email?.toLowerCase() === currentUser.email?.toLowerCase()) {
+        if (trade.symbol === currentSym && chartRef.current) {
+          chartRef.current.removePriceLine(trade.id);
+        }
+        setResolvedTrade(trade);
+        fetchUserData();
+      }
+    });
+
+    return () => {
+      if (socketRef.current) {
+        console.log('Disconnecting from Socket.io server...');
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+    };
+  }, []);
+
+  // 2. Fetch history and emit subscribe events when symbol or interval changes
   useEffect(() => {
     let isMounted = true;
     
-    // 1. Fetch initial historical data
-    const fetchHistory = async () => {
+    const fetchHistoryAndSubscribe = async () => {
       try {
         console.log(`Fetching history for ${symbol} on ${interval}...`);
         const res = await axios.get(`${API_URL}/chart/${symbol}/${interval}`);
@@ -97,34 +168,7 @@ const LiveChartWidget = ({ user, withdrawableBalance = 0 }) => {
           setOhlc({ open: last.open, high: last.high, low: last.low, close: last.close, vol: last.value });
         }
         
-        // 2. Setup Socket Connection ONLY AFTER history is loaded to prevent update() errors
-        if (!socketRef.current) {
-          socketRef.current = io(SOCKET_URL);
-          
-          socketRef.current.on('live_candle', (candle) => {
-            if (!isMounted) return;
-            setCurrentPrice(candle.close);
-            setOhlc({ open: candle.open, high: candle.high, low: candle.low, close: candle.close, vol: candle.value });
-            
-            if (chartRef.current && lastCandleTimeRef.current) {
-              try {
-                // Ensure the live candle time is >= the last historical candle time
-                if (candle.time >= lastCandleTimeRef.current) {
-                  chartRef.current.updateCandle(
-                    { time: candle.time, open: candle.open, high: candle.high, low: candle.low, close: candle.close },
-                    { time: candle.time, value: candle.value, color: candle.close >= candle.open ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)' }
-                  );
-                  lastCandleTimeRef.current = candle.time;
-                }
-              } catch (e) {
-                console.warn('Chart update ignored:', e.message);
-              }
-            }
-          });
-        }
-        
-        // Subscribe to new symbol/interval logic
-        if (isMounted) {
+        if (socketRef.current && isMounted) {
           socketRef.current.emit('subscribe_interval', { symbol, interval });
         }
         
@@ -133,42 +177,10 @@ const LiveChartWidget = ({ user, withdrawableBalance = 0 }) => {
       }
     };
 
-    fetchHistory();
-
-    // 3. Listen for Trade Resolutions
-    if (!socketRef.current) {
-      socketRef.current = io(SOCKET_URL);
-    }
-    
-    socketRef.current.on('trade_resolved', (trade) => {
-      if (!isMounted) return;
-      if (trade.symbol === symbol) {
-        if (chartRef.current) {
-          chartRef.current.removePriceLine(trade.id);
-        }
-        setResolvedTrade(trade);
-      }
-      fetchUserData();
-    });
-
-    socketRef.current.on('contest_trade_resolved', (trade) => {
-      if (!isMounted) return;
-      if (trade.symbol === symbol) {
-        if (chartRef.current) {
-          chartRef.current.removePriceLine(trade.id);
-        }
-        setResolvedTrade(trade);
-      }
-      fetchUserData();
-    });
+    fetchHistoryAndSubscribe();
 
     return () => {
       isMounted = false;
-      if (socketRef.current) {
-        socketRef.current.off('live_candle');
-        socketRef.current.off('trade_resolved');
-        socketRef.current.off('contest_trade_resolved');
-      }
     };
   }, [symbol, interval]);
 
@@ -254,6 +266,7 @@ const LiveChartWidget = ({ user, withdrawableBalance = 0 }) => {
       const entryPrice = parseFloat(t.price);
       const qty = parseFloat(t.quantity);
       const multiplier = getContractMultiplier(t.symbol);
+      const investment = parseFloat(t.investment_amount || 100);
       
       let currentOrClosePrice = entryPrice;
       let pnl = 0;
@@ -264,22 +277,25 @@ const LiveChartWidget = ({ user, withdrawableBalance = 0 }) => {
           currentOrClosePrice = currentPrice;
         }
         
-        if (t.type === 'BUY') {
-          pnl = (currentOrClosePrice - entryPrice) * qty * multiplier;
-        } else {
-          pnl = (entryPrice - currentOrClosePrice) * qty * multiplier;
-        }
-      } else {
-        currentOrClosePrice = parseFloat(t.close_price || t.price);
-        pnl = parseFloat(t.pnl || 0);
-        if (!isContest) {
-          // Standard closed P&L calculation
+        if (isContest) {
           if (t.type === 'BUY') {
             pnl = (currentOrClosePrice - entryPrice) * qty * multiplier;
           } else {
             pnl = (entryPrice - currentOrClosePrice) * qty * multiplier;
           }
+        } else {
+          // Standard Active Trade Running P&L: proportional to investment
+          if (currentOrClosePrice > entryPrice) {
+            pnl = t.type === 'BUY' ? (investment * 0.09) : (-investment * 0.11);
+          } else if (currentOrClosePrice < entryPrice) {
+            pnl = t.type === 'BUY' ? (-investment * 0.11) : (investment * 0.09);
+          } else {
+            pnl = -investment; // Constant price = REJECTED = loses full investment
+          }
         }
+      } else {
+        currentOrClosePrice = parseFloat(t.close_price || t.price);
+        pnl = parseFloat(t.pnl || 0);
       }
       
       totalPnL += pnl;
@@ -294,7 +310,8 @@ const LiveChartWidget = ({ user, withdrawableBalance = 0 }) => {
       return {
         ...t,
         currentOrClosePrice,
-        pnl
+        pnl,
+        profit_loss_amount: t.status === 'OPEN' ? pnl : (t.profit_loss_amount !== undefined && t.profit_loss_amount !== null ? parseFloat(t.profit_loss_amount) : pnl)
       };
     });
     
@@ -317,6 +334,14 @@ const LiveChartWidget = ({ user, withdrawableBalance = 0 }) => {
   };
 
   const metrics = calculatePortfolioMetrics();
+
+  // Compute Standard Mode Dashboard Statistics
+  const resolvedStandard = standardTrades.filter(t => t.status !== 'OPEN');
+  const standardWinCount = standardTrades.filter(t => t.status === 'WON').length;
+  const standardLossCount = standardTrades.filter(t => t.status === 'LOST').length;
+  const standardWinRate = resolvedStandard.length > 0 ? (standardWinCount / resolvedStandard.length) * 100 : 0;
+  const standardTotalProfit = standardTrades.filter(t => t.status === 'WON').reduce((sum, t) => sum + parseFloat(t.pnl || 0), 0);
+  const standardTotalLoss = standardTrades.filter(t => t.status === 'LOST').reduce((sum, t) => sum + Math.abs(parseFloat(t.pnl || 0)), 0);
 
   const formatDate = (dateStr) => {
     const d = new Date(dateStr);
@@ -377,7 +402,6 @@ const LiveChartWidget = ({ user, withdrawableBalance = 0 }) => {
         <div className="lc-chart-side">
           <div className="lc-chart-area">
             <TradingChart ref={chartRef} data={candles} volumeData={volumeData} />
-            <TradePopup trade={resolvedTrade} onClose={() => setResolvedTrade(null)} />
           </div>
 
           {/* Footer Buttons */}
@@ -395,6 +419,8 @@ const LiveChartWidget = ({ user, withdrawableBalance = 0 }) => {
             contestBalance={contestBalance}
             setContestBalance={setContestBalance}
             withdrawableBalance={withdrawableBalance}
+            walletBalance={walletBalance}
+            setWalletBalance={setWalletBalance}
           />
         </div>
 
@@ -439,10 +465,33 @@ const LiveChartWidget = ({ user, withdrawableBalance = 0 }) => {
                           <span className={`trade-type ${typeLabel}`}>{typeLabel} {qtyFormatted}</span>
                         </span>
                         <span className={`trade-pnl ${isProfit ? 'positive' : 'negative'}`}>
-                          {formatMTNumber(t.pnl)}
+                          {isContest ? formatMTNumber(t.pnl) : `₹${formatMTNumber(t.profit_loss_amount || t.pnl)}`}
                         </span>
                       </div>
-                      <div className="lc-mt-trade-sub">
+                      
+                      {!isContest && (
+                        <div className="lc-mt-trade-details-grid" style={{
+                          display: 'grid',
+                          gridTemplateColumns: '1fr 1fr',
+                          gap: '4px 12px',
+                          fontSize: '11px',
+                          color: '#9c93a8',
+                          marginTop: '6px',
+                          paddingTop: '6px',
+                          borderTop: '1px solid rgba(255,255,255,0.04)'
+                        }}>
+                          <div>Invested: <span style={{ color: '#ffffff', fontWeight: 600 }}>₹{parseFloat(t.investment_amount || 100).toFixed(2)}</span></div>
+                          <div>Stake: <span style={{ color: '#ffffff', fontWeight: 600 }}>₹{parseFloat(t.trade_stake || 10).toFixed(2)}</span></div>
+                          <div>App Fee: <span style={{ color: '#ffffff', fontWeight: 600 }}>₹{parseFloat(t.application_fee || 1).toFixed(2)}</span></div>
+                          <div>Payout: <span style={{ color: '#ffffff', fontWeight: 600 }}>
+                            {t.status === 'OPEN' ? 'Pending' : `₹${parseFloat(t.returned_amount || 0).toFixed(2)}`}
+                          </span></div>
+                          <div>Bal Before: <span style={{ color: '#ffffff' }}>₹{parseFloat(t.wallet_balance_before || 0).toFixed(2)}</span></div>
+                          <div>Bal After: <span style={{ color: '#ffffff' }}>{t.status === 'OPEN' ? 'Pending' : `₹${parseFloat(t.wallet_balance_after || 0).toFixed(2)}`}</span></div>
+                        </div>
+                      )}
+
+                      <div className="lc-mt-trade-sub" style={{ marginTop: isContest ? '2px' : '6px' }}>
                         <span className="trade-prices">
                           {formatPrice(t.price, t.symbol)} → {formatPrice(t.currentOrClosePrice, t.symbol)}
                         </span>
@@ -460,45 +509,81 @@ const LiveChartWidget = ({ user, withdrawableBalance = 0 }) => {
                 )}
               </div>
 
-              {/* Account Balance Summary Table */}
-              <div className="lc-mt-summary-table">
-                <div className="lc-mt-summary-row">
-                  <span>Deposit</span>
-                  <strong>{formatMTNumber(metrics.deposit)}</strong>
+              {/* Account Balance Summary Table / Dashboard */}
+              {!isContest ? (
+                <div className="lc-dashboard-container">
+                  <div className="lc-dashboard-wallet">
+                    <span className="lc-dash-label">Wallet Balance</span>
+                    <span className="lc-dash-value wallet">₹{walletBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="lc-dash-grid">
+                    <div className="lc-dash-card">
+                      <span className="lc-dash-num">{standardTrades.length}</span>
+                      <span className="lc-dash-lbl">Total Trades</span>
+                    </div>
+                    <div className="lc-dash-card">
+                      <span className="lc-dash-num win">{standardWinRate.toFixed(1)}%</span>
+                      <span className="lc-dash-lbl">Win Rate</span>
+                    </div>
+                    <div className="lc-dash-card">
+                      <span className="lc-dash-num win">{standardWinCount}</span>
+                      <span className="lc-dash-lbl">Wins</span>
+                    </div>
+                    <div className="lc-dash-card">
+                      <span className="lc-dash-num loss">{standardLossCount}</span>
+                      <span className="lc-dash-lbl">Losses</span>
+                    </div>
+                    <div className="lc-dash-card full-width green-bg">
+                      <span className="lc-dash-label">Total Profit</span>
+                      <span className="lc-dash-val win">₹{standardTotalProfit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="lc-dash-card full-width red-bg">
+                      <span className="lc-dash-label">Total Loss</span>
+                      <span className="lc-dash-val loss">₹{standardTotalLoss.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="lc-mt-summary-row">
-                  <span>Net P&L</span>
-                  <strong className={metrics.profit > 0 ? 'positive' : (metrics.profit < 0 ? 'negative' : '')}>
-                    {formatMTNumber(metrics.profit)}
-                  </strong>
+              ) : (
+                <div className="lc-mt-summary-table">
+                  <div className="lc-mt-summary-row">
+                    <span>Deposit</span>
+                    <strong>{formatMTNumber(metrics.deposit)}</strong>
+                  </div>
+                  <div className="lc-mt-summary-row">
+                    <span>Net P&L</span>
+                    <strong className={metrics.profit > 0 ? 'positive' : (metrics.profit < 0 ? 'negative' : '')}>
+                      {formatMTNumber(metrics.profit)}
+                    </strong>
+                  </div>
+                  <div className="lc-mt-summary-row sub-row">
+                    <span style={{ paddingLeft: '12px', fontSize: '11px', color: '#8e8e93' }}>↳ Gross Profit</span>
+                    <strong className="positive" style={{ fontSize: '11px' }}>{formatMTNumber(metrics.totalProfit)}</strong>
+                  </div>
+                  <div className="lc-mt-summary-row sub-row">
+                    <span style={{ paddingLeft: '12px', fontSize: '11px', color: '#8e8e93' }}>↳ Gross Loss</span>
+                    <strong className="negative" style={{ fontSize: '11px' }}>{formatMTNumber(metrics.totalLoss)}</strong>
+                  </div>
+                  <div className="lc-mt-summary-row">
+                    <span>Swap</span>
+                    <strong>{formatMTNumber(metrics.swap)}</strong>
+                  </div>
+                  <div className="lc-mt-summary-row">
+                    <span>Commission</span>
+                    <strong className={metrics.commission < 0 ? 'negative' : ''}>
+                      {formatMTNumber(metrics.commission)}
+                    </strong>
+                  </div>
+                  <div className="lc-mt-summary-row balance-row">
+                    <span>Balance</span>
+                    <strong>{formatMTNumber(metrics.balance)}</strong>
+                  </div>
                 </div>
-                <div className="lc-mt-summary-row sub-row">
-                  <span style={{ paddingLeft: '12px', fontSize: '11px', color: '#8e8e93' }}>↳ Gross Profit</span>
-                  <strong className="positive" style={{ fontSize: '11px' }}>{formatMTNumber(metrics.totalProfit)}</strong>
-                </div>
-                <div className="lc-mt-summary-row sub-row">
-                  <span style={{ paddingLeft: '12px', fontSize: '11px', color: '#8e8e93' }}>↳ Gross Loss</span>
-                  <strong className="negative" style={{ fontSize: '11px' }}>{formatMTNumber(metrics.totalLoss)}</strong>
-                </div>
-                <div className="lc-mt-summary-row">
-                  <span>Swap</span>
-                  <strong>{formatMTNumber(metrics.swap)}</strong>
-                </div>
-                <div className="lc-mt-summary-row">
-                  <span>Commission</span>
-                  <strong className={metrics.commission < 0 ? 'negative' : ''}>
-                    {formatMTNumber(metrics.commission)}
-                  </strong>
-                </div>
-                <div className="lc-mt-summary-row balance-row">
-                  <span>Balance</span>
-                  <strong>{formatMTNumber(metrics.balance)}</strong>
-                </div>
-              </div>
+              )}
             </div>
           )}
         </div>
       </div>
+      <TradePopup trade={resolvedTrade} onClose={() => setResolvedTrade(null)} />
     </div>
   );
 };

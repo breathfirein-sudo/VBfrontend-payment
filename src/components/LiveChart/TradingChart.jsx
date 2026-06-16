@@ -62,7 +62,7 @@ const TradingChart = forwardRef(({ data, volumeData, backgroundColor = 'transpar
         horzLines: { color: 'rgba(42, 46, 57, 0.3)' },
       },
       width: chartContainerRef.current.clientWidth || 300,
-      height: 400,
+      height: chartContainerRef.current.clientHeight || 400,
       timeScale: {
         timeVisible: true,
         secondsVisible: false,
@@ -96,9 +96,9 @@ const TradingChart = forwardRef(({ data, volumeData, backgroundColor = 'transpar
 
     const resizeObserver = new ResizeObserver((entries) => {
       if (!entries || entries.length === 0) return;
-      const { width } = entries[0].contentRect;
-      if (chartRef.current && width > 0) {
-        chartRef.current.applyOptions({ width });
+      const { width, height } = entries[0].contentRect;
+      if (chartRef.current && width > 0 && height > 0) {
+        chartRef.current.applyOptions({ width, height });
       }
     });
     resizeObserver.observe(chartContainerRef.current);

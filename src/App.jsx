@@ -3720,7 +3720,12 @@ function App() {
                 )}
               </div>
               <div className="trade-chart-container">
-                <LiveChartWidget user={user} withdrawableBalance={withdrawableBalance} />
+                <LiveChartWidget 
+                  user={user} 
+                  withdrawableBalance={withdrawableBalance} 
+                  walletBalance={walletBalance}
+                  setWalletBalance={setWalletBalance}
+                />
               </div>
             </div>
           )}
