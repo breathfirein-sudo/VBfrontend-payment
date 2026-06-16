@@ -116,11 +116,31 @@ const TradingChart = forwardRef(({ data, volumeData, backgroundColor = 'transpar
   // Live tick updates go through the imperative updateCandle() handle — NOT here.
   useEffect(() => {
     if (!candlestickSeriesRef.current || !volumeSeriesRef.current) return;
+    
     if (data && data.length > 0) {
-      candlestickSeriesRef.current.setData(data);
+      // Sort ascending by time
+      const sortedData = [...data].sort((a, b) => a.time - b.time);
+      // Filter out duplicate timestamps (lightweight-charts fails if time is not strictly increasing)
+      const uniqueData = [];
+      for (let i = 0; i < sortedData.length; i++) {
+        if (i === 0 || sortedData[i].time > sortedData[i - 1].time) {
+          uniqueData.push(sortedData[i]);
+        }
+      }
+      candlestickSeriesRef.current.setData(uniqueData);
     }
+    
     if (volumeData && volumeData.length > 0) {
-      volumeSeriesRef.current.setData(volumeData);
+      // Sort ascending by time
+      const sortedVolume = [...volumeData].sort((a, b) => a.time - b.time);
+      // Filter out duplicate timestamps
+      const uniqueVolume = [];
+      for (let i = 0; i < sortedVolume.length; i++) {
+        if (i === 0 || sortedVolume[i].time > sortedVolume[i - 1].time) {
+          uniqueVolume.push(sortedVolume[i]);
+        }
+      }
+      volumeSeriesRef.current.setData(uniqueVolume);
     }
   }, [data, volumeData]);
 

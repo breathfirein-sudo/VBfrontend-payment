@@ -82,11 +82,11 @@ if (typeof window !== 'undefined') {
 }
 
 const InvesthourLogoText = ({ customStyle, suffix }) => (
-  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', ...customStyle }}>
-    <span className="logo-text" style={{ letterSpacing: '1.2px', fontSize: '20px', fontWeight: '800' }}>
+  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', ...customStyle }}>
+    <span className="logo-text" style={{ letterSpacing: '1.2px', fontSize: '18px', fontWeight: '800' }}>
       Investhour{suffix}
     </span>
-    <span style={{ fontSize: '20px', display: 'inline-flex', gap: '2px', whiteSpace: 'nowrap', WebkitTextFillColor: 'initial', WebkitBackgroundClip: 'initial', background: 'none' }}>
+    <span style={{ fontSize: '18px', display: 'inline-flex', gap: '2px', whiteSpace: 'nowrap', WebkitTextFillColor: 'initial', WebkitBackgroundClip: 'initial', background: 'none' }}>
       📈⌛
     </span>
   </span>
