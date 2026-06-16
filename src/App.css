@@ -16,6 +16,8 @@
   align-items: center;
   justify-content: space-between;
   height: 80px;
+  max-width: 1420px;
+  width: 100%;
 }
 
 .logo-section {
