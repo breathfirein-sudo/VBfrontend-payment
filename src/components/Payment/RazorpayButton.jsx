@@ -60,7 +60,7 @@ const RazorpayButton = ({ amount, type, onSuccess, onError, payoutDetails }) => 
       // If it's a withdrawal, ensure payoutDetails are provided
       if (type === 'withdraw') {
         if (!payoutDetails) {
-          alert("Please fill out all the required withdrawal payout details (UPI or Bank Account).");
+          alert("Please fill out all the required withdrawal payout details (Bank Account).");
           setLoading(false);
           return;
         }
@@ -218,8 +218,8 @@ const RazorpayButton = ({ amount, type, onSuccess, onError, payoutDetails }) => 
         : 'bg-[#120524] text-white border border-[rgba(255,255,255,0.1)] hover:bg-[#1a0b2e]'
       }`}
       style={{
-        background: isGreenBtn ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : '#120524',
-        border: isGreenBtn ? 'none' : '1px solid rgba(255,255,255,0.1)',
+        background: isGreenBtn ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'linear-gradient(135deg, #1c0a30 0%, #120524 100%)',
+        border: isGreenBtn ? 'none' : '1px solid rgba(217, 175, 86, 0.4)',
         padding: '16px',
         width: '100%',
         borderRadius: '12px',
@@ -228,9 +228,11 @@ const RazorpayButton = ({ amount, type, onSuccess, onError, payoutDetails }) => 
         justifyContent: 'center',
         gap: '8px',
         fontWeight: 'bold',
-        color: '#fff',
+        color: isGreenBtn ? '#fff' : '#d9af56',
         cursor: loading ? 'not-allowed' : 'pointer',
-        marginTop: '15px'
+        marginTop: '15px',
+        boxShadow: isGreenBtn ? '0 4px 14px rgba(16, 185, 129, 0.3)' : '0 4px 14px rgba(217, 175, 86, 0.15)',
+        transition: 'all 0.3s ease-in-out'
       }}
     >
       {loading ? (
