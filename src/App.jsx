@@ -1579,6 +1579,15 @@ function App() {
       try {
         const parsed = JSON.parse(savedLocalUser);
         
+        if (isSupportSubdomain && !parsed.isExecutive) {
+          localStorage.removeItem('vb_local_user');
+          localStorage.removeItem('vb_jwt_token');
+          setUser(null);
+          setView('auth');
+          finishLoading();
+          return;
+        }
+
         if (parsed.isExecutive) {
           setUser(parsed);
           setView('support-dashboard');
