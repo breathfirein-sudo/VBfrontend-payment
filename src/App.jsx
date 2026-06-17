@@ -88,7 +88,7 @@ const INITIAL_RATES = {
   gold: { price: 6143.57, change: 48.96, pct: 0.80 }
 };
 
-const VITE_BACKEND_URL = import.meta.env.VITE_BACKEND_URL || (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:5000' : 'https://hour-60kr.onrender.com');
+const VITE_BACKEND_URL = import.meta.env.VITE_BACKEND_URL || (typeof window !== 'undefined' && (window.location.hostname.includes('localhost') || window.location.hostname === '127.0.0.1') ? 'http://localhost:5000' : 'https://hour-60kr.onrender.com');
 
 // Timeout-aware fetch wrapper (default 90s for cold starts)
 const fetchWithTimeout = (url, options = {}, timeoutMs = 90000) => {
