@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { getAuthToken } from '../utils/authHelper';
 
-const backendUrl = import.meta.env.VITE_BACKEND_URL || (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:5000' : 'https://hour-60kr.onrender.com');
+const backendUrl = import.meta.env.VITE_BACKEND_URL || (typeof window !== 'undefined' && (window.location.hostname.includes('localhost') || window.location.hostname === '127.0.0.1') ? 'http://localhost:5000' : 'https://hour-60kr.onrender.com');
 const API_BASE_URL = `${backendUrl}/api/payments`;
 
 const getAuthHeaders = async () => {
