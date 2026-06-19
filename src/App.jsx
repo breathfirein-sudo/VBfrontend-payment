@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import RazorpayButton from './components/Payment/RazorpayButton';
 import {
   ChevronDown,
   ArrowRightLeft,
@@ -531,6 +530,13 @@ function App() {
   const [manualScreenshot, setManualScreenshot] = useState(null);
   const [manualDepositSubmitting, setManualDepositSubmitting] = useState(false);
   const [manualPaymentMethod, setManualPaymentMethod] = useState('UPI');
+  const [manualPayTab, setManualPayTab] = useState('upi'); // 'upi' or 'bank'
+  const [copiedField, setCopiedField] = useState('');
+  const handleCopyText = (text, fieldName) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(fieldName);
+    setTimeout(() => setCopiedField(''), 2000);
+  };
 
   const handleManualDepositSubmit = async (e) => {
     e.preventDefault();
@@ -560,6 +566,8 @@ function App() {
         setManualScreenshot(null);
         setDepositAmount('');
         setManualPaymentMethod('UPI');
+        // Refresh support chat history so the user sees the automated deposit screenshot message immediately
+        fetchUserChatHistory();
       } else {
         alert(data.error || "Submission failed");
       }
@@ -567,6 +575,533 @@ function App() {
       alert("Error: " + err.message);
     } finally {
       setManualDepositSubmitting(false);
+    }
+  };
+
+  const renderManualDepositModal = () => {
+    if (!showManualDepositModal) return null;
+    return (
+      <div className="modal-overlay" style={{ 
+        zIndex: 9999, 
+        backdropFilter: 'blur(8px)', 
+        background: 'rgba(5, 2, 10, 0.8)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '20px',
+        animation: 'fadeIn 0.25s ease-out'
+      }}>
+        <div className="modal-content" style={{ 
+          maxWidth: '800px', 
+          background: 'linear-gradient(135deg, #15092a 0%, #0d031b 100%)', 
+          border: '1px solid rgba(217, 175, 86, 0.25)', 
+          boxShadow: '0 25px 60px rgba(0,0,0,0.8), 0 0 30px rgba(217, 175, 86, 0.05)', 
+          width: '100%', 
+          borderRadius: '20px',
+          padding: '28px',
+          position: 'relative'
+        }}>
+          {/* Header */}
+          <div className="modal-header" style={{ 
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.06)', 
+            paddingBottom: '16px',
+            marginBottom: '20px'
+          }}>
+            <h3 style={{ 
+              color: '#d9af56', 
+              margin: 0, 
+              fontSize: '20px', 
+              fontWeight: 800,
+              letterSpacing: '0.5px',
+              background: 'linear-gradient(135deg, #fff 0%, #d9af56 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent'
+            }}>
+              {depositAmount === '10' ? 'Pay Vault Unlock Fee' : 'Submit Manual Deposit'}
+            </h3>
+            <button 
+              className="btn-close" 
+              onClick={() => setShowManualDepositModal(false)} 
+              style={{ 
+                color: '#9c93a8', 
+                border: 'none', 
+                background: 'rgba(255,255,255,0.05)', 
+                cursor: 'pointer',
+                borderRadius: '50%',
+                width: '32px',
+                height: '32px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s'
+              }}
+              onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#fff'; }}
+              onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = '#9c93a8'; }}
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          {/* Form */}
+          <form onSubmit={handleManualDepositSubmit}>
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: '1fr 1.1fr', 
+              gap: '24px',
+              alignItems: 'start',
+              marginBottom: '20px'
+            }}>
+              {/* Left Column: QR Code / Bank Details */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <span style={{ fontSize: '11px', color: '#a78bfa', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700 }}>1. Choose Payment Option</span>
+                
+                {/* Payment Tabs */}
+                <div style={{ 
+                  display: 'flex', 
+                  background: 'rgba(0, 0, 0, 0.25)', 
+                  borderRadius: '10px',
+                  padding: '4px',
+                  border: '1px solid rgba(255, 255, 255, 0.05)'
+                }}>
+                  <button
+                    type="button"
+                    onClick={() => setManualPayTab('upi')}
+                    style={{
+                      flex: 1, 
+                      padding: '10px', 
+                      background: manualPayTab === 'upi' ? 'rgba(16, 185, 129, 0.15)' : 'transparent', 
+                      border: manualPayTab === 'upi' ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid transparent',
+                      borderRadius: '8px',
+                      color: manualPayTab === 'upi' ? '#10b981' : '#9c93a8',
+                      fontWeight: 'bold', 
+                      cursor: 'pointer', 
+                      fontSize: '13px',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    UPI QR Payment
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setManualPayTab('bank')}
+                    style={{
+                      flex: 1, 
+                      padding: '10px', 
+                      background: manualPayTab === 'bank' ? 'rgba(16, 185, 129, 0.15)' : 'transparent', 
+                      border: manualPayTab === 'bank' ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid transparent',
+                      borderRadius: '8px',
+                      color: manualPayTab === 'bank' ? '#10b981' : '#9c93a8',
+                      fontWeight: 'bold', 
+                      cursor: 'pointer', 
+                      fontSize: '13px',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    Bank Details
+                  </button>
+                </div>
+
+                {/* Tab contents */}
+                {manualPayTab === 'upi' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', padding: '5px 0' }}>
+                    <div style={{ 
+                      background: '#fff', 
+                      padding: '10px', 
+                      borderRadius: '16px', 
+                      boxShadow: '0 8px 30px rgba(16, 185, 129, 0.15)', 
+                      border: '2px solid rgba(16, 185, 129, 0.3)',
+                      display: 'inline-block' 
+                    }}>
+                      <img src="/deposit-qr.jpg" alt="Deposit QR Code" style={{ width: '130px', height: '130px', display: 'block', borderRadius: '8px', objectFit: 'contain' }} />
+                    </div>
+                    <span style={{ fontSize: '11px', color: '#9c93a8', fontWeight: 500, textAlign: 'center', maxWidth: '300px', lineHeight: '1.4' }}>
+                      Scan QR code using PhonePe, Paytm, GooglePay or any UPI application.
+                    </span>
+                    
+                    <div style={{ 
+                      width: '100%', 
+                      background: 'rgba(255, 255, 255, 0.02)', 
+                      border: '1px solid rgba(255, 255, 255, 0.06)', 
+                      borderRadius: '12px', 
+                      padding: '10px 14px', 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center',
+                      marginTop: '2px' 
+                    }}>
+                      <div>
+                        <div style={{ fontSize: '9px', color: '#9c93a8', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700 }}>UPI ID</div>
+                        <div style={{ fontSize: '13px', color: '#fff', fontWeight: 800, fontFamily: 'monospace', marginTop: '2px' }}>8121743677@hdfc</div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyText('8121743677@hdfc', 'upi')}
+                        style={{ 
+                          background: copiedField === 'upi' ? '#10b981' : 'rgba(217, 175, 86, 0.08)', 
+                          color: copiedField === 'upi' ? '#000' : '#d9af56', 
+                          border: copiedField === 'upi' ? '1px solid #10b981' : '1px solid rgba(217, 175, 86, 0.25)', 
+                          padding: '6px 12px', 
+                          borderRadius: '8px', 
+                          fontSize: '11px', 
+                          fontWeight: 700, 
+                          cursor: 'pointer', 
+                          transition: 'all 0.2s', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '6px' 
+                        }}
+                        onMouseOver={(e) => { if (copiedField !== 'upi') { e.currentTarget.style.background = 'rgba(217, 175, 86, 0.15)'; } }}
+                        onMouseOut={(e) => { if (copiedField !== 'upi') { e.currentTarget.style.background = 'rgba(217, 175, 86, 0.08)'; } }}
+                      >
+                        {copiedField === 'upi' ? <Check size={12} /> : <Copy size={12} />}
+                        {copiedField === 'upi' ? 'Copied!' : 'Copy'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {manualPayTab === 'bank' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '5px 0' }}>
+                    {[
+                      { label: 'Account Holder', value: 'BREATH FIRE', key: 'holder' },
+                      { label: 'Account Number', value: '50200068127570', key: 'acc', highlight: true },
+                      { label: 'IFSC Code', value: 'HDFC0002095', key: 'ifsc', highlight: true },
+                      { label: 'Bank Name & Branch', value: 'HDFC BANK - WANAPARTHY', key: 'bank' },
+                      { label: 'Account Type', value: 'Current Account', key: 'type' }
+                    ].map((field) => (
+                      <div key={field.key} style={{ 
+                        background: 'rgba(255, 255, 255, 0.015)', 
+                        border: '1px solid rgba(255, 255, 255, 0.05)', 
+                        borderRadius: '10px', 
+                        padding: '8px 12px', 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center',
+                        transition: 'all 0.15s ease'
+                      }}
+                      onMouseOver={(e) => { e.currentTarget.style.borderColor = 'rgba(217, 175, 86, 0.15)'; e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)'; }}
+                      onMouseOut={(e) => { e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.05)'; e.currentTarget.style.background = 'rgba(255, 255, 255, 0.015)'; }}
+                      >
+                        <div>
+                          <div style={{ fontSize: '8px', color: '#9c93a8', textTransform: 'uppercase', letterSpacing: '0.8px', fontWeight: 600 }}>{field.label}</div>
+                          <div style={{ 
+                            fontSize: '12px', 
+                            color: field.highlight ? '#d9af56' : '#fff', 
+                            fontWeight: 700,
+                            fontFamily: field.highlight ? 'monospace' : 'inherit',
+                            marginTop: '2px'
+                          }}>{field.value}</div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyText(field.value, field.key)}
+                          style={{ 
+                            background: copiedField === field.key ? '#10b981' : 'rgba(255, 255, 255, 0.05)', 
+                            color: copiedField === field.key ? '#000' : '#cbd5e1', 
+                            border: copiedField === field.key ? '1px solid #10b981' : '1px solid rgba(255, 255, 255, 0.1)', 
+                            padding: '4px 8px', 
+                            borderRadius: '4px', 
+                            fontSize: '10px', 
+                            fontWeight: 700, 
+                            cursor: 'pointer', 
+                            transition: 'all 0.2s', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '4px' 
+                          }}
+                          onMouseOver={(e) => { if (copiedField !== field.key) { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'; } }}
+                          onMouseOut={(e) => { if (copiedField !== field.key) { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'; } }}
+                        >
+                          {copiedField === field.key ? <Check size={10} /> : <Copy size={10} />}
+                          {copiedField === field.key ? 'Copied!' : 'Copy'}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Right Column: Submission Form Inputs */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <span style={{ fontSize: '11px', color: '#a78bfa', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700 }}>2. Submit Payment Details</span>
+
+                {/* Amount locked display */}
+                <div style={{
+                  background: 'linear-gradient(135deg, rgba(217, 175, 86, 0.08) 0%, rgba(217, 175, 86, 0.02) 100%)',
+                  border: '1px solid rgba(217, 175, 86, 0.25)',
+                  borderRadius: '12px',
+                  padding: '10px 16px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.3)'
+                }}>
+                  <span style={{ fontSize: '12px', color: '#9c93a8', fontWeight: 600 }}>Amount Locked</span>
+                  <span style={{ fontSize: '18px', color: '#d9af56', fontWeight: 800 }}>₹{depositAmount}</span>
+                </div>
+
+                {/* UTR Input */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '11px', color: '#9c93a8', textTransform: 'uppercase', letterSpacing: '0.8px', fontWeight: 700 }}>12-Digit UTR / Ref Number</label>
+                  <input 
+                    type="text" 
+                    required 
+                    maxLength={12}
+                    pattern="\d{12}"
+                    title="Please enter exactly 12 numeric digits"
+                    placeholder="Enter 12-digit transaction ID" 
+                    value={manualUtr} 
+                    onChange={(e) => setManualUtr(e.target.value.replace(/\D/g, ''))} 
+                    style={{ 
+                      width: '100%', 
+                      padding: '10px 14px', 
+                      borderRadius: '10px', 
+                      border: '1px solid rgba(255, 255, 255, 0.1)', 
+                      background: 'rgba(0, 0, 0, 0.3)', 
+                      color: '#fff', 
+                      outline: 'none',
+                      fontSize: '13px',
+                      fontFamily: 'monospace',
+                      letterSpacing: '1px',
+                      transition: 'all 0.2s'
+                    }} 
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = '#10b981';
+                      e.currentTarget.style.boxShadow = '0 0 10px rgba(16, 185, 129, 0.15)';
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}
+                  />
+                </div>
+
+                {/* Payment Method */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '11px', color: '#9c93a8', textTransform: 'uppercase', letterSpacing: '0.8px', fontWeight: 700 }}>Payment Mode Used</label>
+                  <select 
+                    required 
+                    value={manualPaymentMethod} 
+                    onChange={(e) => setManualPaymentMethod(e.target.value)} 
+                    style={{ 
+                      width: '100%', 
+                      padding: '10px 14px', 
+                      borderRadius: '10px', 
+                      border: '1px solid rgba(255, 255, 255, 0.1)', 
+                      background: 'rgba(0, 0, 0, 0.3)', 
+                      color: '#fff', 
+                      outline: 'none',
+                      fontSize: '13px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = '#10b981';
+                      e.currentTarget.style.boxShadow = '0 0 10px rgba(16, 185, 129, 0.15)';
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}
+                  >
+                    <option value="UPI" style={{ background: '#120524' }}>UPI</option>
+                    <option value="Bank Transfer" style={{ background: '#120524' }}>Bank Transfer / IMPS / NEFT</option>
+                    <option value="Net Banking" style={{ background: '#120524' }}>Net Banking</option>
+                    <option value="Wallet" style={{ background: '#120524' }}>Wallet Transfer</option>
+                    <option value="Others" style={{ background: '#120524' }}>Others</option>
+                  </select>
+                </div>
+
+                {/* Custom Screenshot Uploader */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '11px', color: '#9c93a8', textTransform: 'uppercase', letterSpacing: '0.8px', fontWeight: 700 }}>Payment Screenshot / Receipt</label>
+                  <div 
+                    onClick={() => document.getElementById('manual-deposit-file-input').click()}
+                    style={{
+                      border: '2px dashed rgba(255, 255, 255, 0.15)',
+                      borderRadius: '10px',
+                      padding: '16px 12px',
+                      textAlign: 'center',
+                      background: 'rgba(0,0,0,0.2)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease-in-out',
+                    }}
+                    onMouseOver={(e) => { e.currentTarget.style.borderColor = '#10b981'; e.currentTarget.style.background = 'rgba(16, 185, 129, 0.02)'; }}
+                    onMouseOut={(e) => { e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)'; e.currentTarget.style.background = 'rgba(0,0,0,0.2)'; }}
+                  >
+                    <input 
+                      id="manual-deposit-file-input"
+                      type="file" 
+                      required 
+                      accept="image/*" 
+                      onChange={(e) => setManualScreenshot(e.target.files[0])} 
+                      style={{ display: 'none' }} 
+                    />
+                    {!manualScreenshot ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                        <Upload size={20} style={{ color: '#10b981' }} />
+                        <span style={{ fontSize: '12px', color: '#fff', fontWeight: 700 }}>Click to upload screenshot</span>
+                        <span style={{ fontSize: '9px', color: '#9c93a8' }}>PNG, JPG or JPEG (Max 5MB)</span>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }} onClick={(e) => e.stopPropagation()}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <img 
+                            src={URL.createObjectURL(manualScreenshot)} 
+                            alt="Preview" 
+                            style={{ width: '36px', height: '36px', borderRadius: '6px', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.1)' }} 
+                          />
+                          <div style={{ textAlign: 'left' }}>
+                            <div style={{ fontSize: '11px', color: '#fff', fontWeight: 700, maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{manualScreenshot.name}</div>
+                            <div style={{ fontSize: '9px', color: '#9c93a8' }}>{(manualScreenshot.size / (1024 * 1024)).toFixed(2)} MB</div>
+                          </div>
+                        </div>
+                        <button 
+                          type="button"
+                          onClick={() => setManualScreenshot(null)}
+                          style={{ 
+                            background: 'rgba(244, 63, 94, 0.15)', 
+                            color: '#f43f5e', 
+                            border: 'none', 
+                            padding: '6px', 
+                            borderRadius: '6px', 
+                            cursor: 'pointer', 
+                            display: 'flex', 
+                            alignItems: 'center',
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Submit Button */}
+            <div style={{ 
+              borderTop: '1px solid rgba(255, 255, 255, 0.06)', 
+              paddingTop: '20px',
+              display: 'flex',
+              justifyContent: 'flex-end'
+            }}>
+              <button 
+                type="submit" 
+                disabled={manualDepositSubmitting} 
+                style={{ 
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', 
+                  color: '#fff', 
+                  border: 'none', 
+                  padding: '14px 28px', 
+                  borderRadius: '10px', 
+                  fontWeight: 'bold', 
+                  fontSize: '14px',
+                  cursor: manualDepositSubmitting ? 'not-allowed' : 'pointer', 
+                  boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  transition: 'all 0.25s',
+                  width: '100%'
+                }}
+                onMouseOver={(e) => { if (!manualDepositSubmitting) { e.currentTarget.style.boxShadow = '0 6px 20px rgba(16, 185, 129, 0.45)'; e.currentTarget.style.transform = 'translateY(-1px)'; } }}
+                onMouseOut={(e) => { if (!manualDepositSubmitting) { e.currentTarget.style.boxShadow = '0 4px 15px rgba(16, 185, 129, 0.3)'; e.currentTarget.style.transform = 'translateY(0)'; } }}
+              >
+                {manualDepositSubmitting ? (
+                  <>
+                    <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                    <span>Submitting Details...</span>
+                  </>
+                ) : (
+                  <span>Submit Deposit for Verification</span>
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  };
+
+  const [withdrawSubmitting, setWithdrawSubmitting] = useState(false);
+
+  const handleWithdrawSubmit = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    const val = parseFloat(withdrawAmount);
+    if (!val || val <= 0) {
+      alert("Please enter a valid amount to withdraw.");
+      return;
+    }
+    if (val < 500) {
+      alert("Minimum withdrawal amount is ₹500");
+      return;
+    }
+    if (withdrawableBalance < val) {
+      alert(`Insufficient withdrawable balance. Your withdrawable balance is ₹${withdrawableBalance.toFixed(2)}.`);
+      return;
+    }
+    if (!bankName || !accountHolderName || !accountNumber || !ifscCode) {
+      alert("Please fill out all the required bank details (Holder Name, Bank Name, Account Number, IFSC).");
+      return;
+    }
+
+    setWithdrawSubmitting(true);
+    try {
+      const token = await getAuthToken();
+      const payoutDetails = {
+        accountName: accountHolderName,
+        bankName,
+        accountNumber,
+        ifsc: ifscCode.toUpperCase(),
+        mode: payoutMode
+      };
+      
+      const res = await fetch(`${VITE_BACKEND_URL}/api/payments/create-order`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          amount: val,
+          currency: 'INR',
+          type: 'withdraw',
+          payoutDetails
+        })
+      });
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to submit withdrawal request');
+      }
+
+      alert(`Successfully initiated withdrawal of ₹${val}! Payout ID: ${data.payoutId || 'N/A'}`);
+      setWalletBalance((prev) => parseFloat((prev - val).toFixed(2)));
+      setTransactions((prev) => [{
+        id: `TX-${Math.floor(1000 + Math.random() * 9000)}`,
+        type: 'withdrawal',
+        asset: 'wallet',
+        amount: val,
+        weight: 0,
+        date: new Date().toISOString().slice(0, 16).replace('T', ' '),
+        status: 'Completed'
+      }, ...prev]);
+      setWithdrawAmount('');
+      setUpiId('');
+      if (user && user.email) {
+        syncLockedBankDetails(user.email);
+      }
+      setShowWithdrawModal(false);
+    } catch (err) {
+      console.error(err);
+      alert(err.message || 'Error processing withdrawal.');
+    } finally {
+      setWithdrawSubmitting(false);
     }
   };
   
@@ -7267,48 +7802,52 @@ function App() {
                   boxShadow: '0 4px 25px rgba(217, 175, 86, 0.05)'
                 }}>
                   <div>
-                    <span style={{ fontSize: '11px', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase', color: '#10b981', display: 'block', marginBottom: '8px' }}>Option B (Instant)</span>
-                    <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#ffffff', margin: '0 0 12px 0' }}>Instant Pay Unlock</h3>
+                    <span style={{ fontSize: '11px', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase', color: '#10b981', display: 'block', marginBottom: '8px' }}>Option B (Manual)</span>
+                    <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#ffffff', margin: '0 0 12px 0' }}>Manual Pay Unlock</h3>
                     <p style={{ fontSize: '13px', color: '#9c93a8', lineHeight: '1.5', margin: '0 0 20px 0' }}>
-                      Unlock your vault immediately by paying a one-time setup and account opening fee of ₹10.
+                      Unlock your vault immediately by paying a one-time setup and account opening fee of ₹10 via UPI/Bank Transfer.
                     </p>
 
                     <div style={{ background: 'rgba(16, 185, 129, 0.04)', padding: '20px 15px', borderRadius: '10px', border: '1px solid rgba(16, 185, 129, 0.15)', textAlign: 'center', marginBottom: '20px' }}>
                       <span style={{ display: 'block', fontSize: '10px', color: '#9c93a8', textTransform: 'uppercase', marginBottom: '4px', letterSpacing: '1px' }}>Account Opening Fee</span>
                       <strong style={{ fontSize: '28px', color: '#10b981', display: 'block' }}>₹10</strong>
-                      <span style={{ fontSize: '10px', color: '#9c93a8', display: 'block', marginTop: '4px' }}>Secured payment via Razorpay</span>
+                      <span style={{ fontSize: '10px', color: '#9c93a8', display: 'block', marginTop: '4px' }}>Manual UPI / Bank Transfer Verification</span>
                     </div>
                   </div>
 
                   <div>
-                    <RazorpayButton 
-                      amount={10} 
-                      type="unlock" 
-                      onSuccess={(verifyResult) => {
-                        if (verifyResult.isUnlocked || verifyResult.success) {
-                          setIsUnlocked(true);
-                          // Re-sync with backend to be absolutely sure
-                          fetch(`${VITE_BACKEND_URL}/api/auth/validate`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ email: user.email })
-                          })
-                            .then(r => r.json())
-                            .then(data => {
-                              if (data.valid && data.isUnlocked) {
-                                setIsUnlocked(true);
-                              }
-                            });
-                        }
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDepositAmount('10');
+                        setShowManualDepositModal(true);
                       }}
-                    />
+                      style={{
+                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                        border: 'none',
+                        padding: '16px',
+                        width: '100%',
+                        borderRadius: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        fontWeight: 'bold',
+                        color: '#fff',
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)',
+                        transition: 'all 0.3s ease-in-out'
+                      }}
+                    >
+                      Pay ₹10 & Submit UTR
+                    </button>
+                  </div>
                   </div>
                 </div>
               </div>
-
             </div>
+            {renderManualDepositModal()}
           </div>
-        </div>
       );
     }
     const goldVal = (holdings?.gold || 0) * rates.gold.price;
@@ -7666,49 +8205,22 @@ function App() {
                           <span className="currency-symbol">{'\u20b9'}</span>
                           <input type="number" placeholder="Enter amount (min 100)" value={depositAmount} onChange={(e) => setDepositAmount(e.target.value)} />
                         </div>
-                        <RazorpayButton 
-                          amount={parseFloat(depositAmount) || 0} 
-                          type="deposit" 
-                          onSuccess={(data) => {
-                            const val = parseFloat(depositAmount);
-                            // Use exact server-returned balance if available, otherwise add to current
-                            if (data.newBalance !== undefined) {
-                              setWalletBalance(parseFloat(data.newBalance.toFixed(2)));
-                            } else {
-                              setWalletBalance((prev) => parseFloat((prev + val).toFixed(2)));
-                            }
-                            setTransactions((prev) => [{ id: `TX-${Math.floor(1000 + Math.random() * 9000)}`, type: 'deposit', asset: 'wallet', amount: val, weight: 0, date: new Date().toISOString().slice(0, 16).replace('T', ' '), status: 'Completed' }, ...prev]);
-                            setDepositAmount('');
-                            // Re-sync from backend to get latest balance and transactions
-                            setTimeout(() => {
-                              fetch(`${VITE_BACKEND_URL}/api/auth/validate`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ email: user.email })
-                              }).then(r => r.json()).then(syncData => {
-                                if (syncData.valid) {
-                                  if (syncData.walletBalance !== undefined) setWalletBalance(syncData.walletBalance);
-                                  if (syncData.transactions !== undefined) {
-                                    setTransactions(syncData.transactions.map(t => ({
-                                      id: 'TX-' + t.id,
-                                      type: t.type?.toLowerCase() === 'deposit' ? 'deposit' : t.type?.toLowerCase() === 'referral' ? 'referral' : t.type?.toLowerCase() === 'refund' ? 'refund' : 'withdrawal',
-                                      asset: t.asset || 'wallet', amount: t.amount, status: 'Completed',
-                                      date: new Date(t.createdAt).toISOString().slice(0, 16).replace('T', ' ')
-                                    })));
-                                  }
-                                }
-                              }).catch(() => {});
-                            }, 500);
-                          }}
-                        />
                         <button 
                           type="button" 
-                          onClick={() => setShowManualDepositModal(true)} 
+                          onClick={() => {
+                            const val = parseFloat(depositAmount);
+                            if (!val || val < 100) {
+                              alert("Minimum deposit amount is ₹100");
+                              return;
+                            }
+                            setShowManualDepositModal(true);
+                          }} 
                           style={{ 
-                            marginTop: '10px', width: '100%', padding: '12px', background: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6', border: '1px solid rgba(59, 130, 246, 0.3)', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold', transition: 'all 0.3s'
+                            marginTop: '15px', width: '100%', padding: '16px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#fff', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold', transition: 'all 0.3s',
+                            boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)'
                           }}
                         >
-                          Manual Deposit (via UTR)
+                          Proceed to Deposit
                         </button>
                       </div>
                       <div className="funding-input-group" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
@@ -8383,41 +8895,30 @@ function App() {
                   </div>
                 </div>
 
-                <RazorpayButton 
-                  amount={parseFloat(withdrawAmount) || 0} 
-                  type="withdraw" 
-                  payoutDetails={
-                    bankName && accountHolderName && accountNumber && ifscCode ? { accountName: accountHolderName, bankName, accountNumber, ifsc: ifscCode.toUpperCase(), mode: payoutMode } : null
-                  }
-                  onSuccess={(data) => {
-                    const val = parseFloat(withdrawAmount);
-                    if (val < 500) {
-                      alert('Minimum withdrawal is ₹500.');
-                      return;
-                    }
-                    if (withdrawableBalance < val) {
-                      alert(`Insufficient withdrawable balance. Your withdrawable balance is ₹${withdrawableBalance.toFixed(2)}.`);
-                      return;
-                    }
-                    setWalletBalance((prev) => parseFloat((prev - val).toFixed(2)));
-                    setTransactions((prev) => [{ id: `TX-${Math.floor(1000 + Math.random() * 9000)}`, type: 'withdrawal', asset: 'wallet', amount: val, weight: 0, date: new Date().toISOString().slice(0, 16).replace('T', ' '), status: 'Completed' }, ...prev]);
-                    setWithdrawAmount('');
-                    setUpiId('');
-                    if (user && user.email) {
-                      syncLockedBankDetails(user.email);
-                    }
-                    setShowWithdrawModal(false);
+                <button
+                  type="button"
+                  onClick={handleWithdrawSubmit}
+                  disabled={withdrawSubmitting}
+                  style={{
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    border: 'none',
+                    padding: '16px',
+                    width: '100%',
+                    borderRadius: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    fontWeight: 'bold',
+                    color: '#fff',
+                    cursor: withdrawSubmitting ? 'not-allowed' : 'pointer',
+                    marginTop: '15px',
+                    boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)',
+                    transition: 'all 0.3s ease-in-out'
                   }}
-                  onError={(err) => {
-                    if (err?.response?.data?.error) {
-                      alert(err.response.data.error);
-                    } else if (withdrawableBalance < parseFloat(withdrawAmount)) {
-                      alert(`Insufficient withdrawable balance. Your withdrawable balance is ₹${withdrawableBalance.toFixed(2)}.`);
-                    } else if (parseFloat(withdrawAmount) < 500) {
-                      alert('Minimum withdrawal is ₹500.');
-                    }
-                  }}
-                />
+                >
+                  {withdrawSubmitting ? 'Processing...' : 'Withdraw Funds'}
+                </button>
               </div>
             </div>
           </div>
@@ -9115,39 +9616,30 @@ function App() {
                   </div>
                 </div>
 
-                <RazorpayButton 
-                  amount={parseFloat(withdrawAmount) || 0} 
-                  type="withdraw" 
-                  payoutDetails={
-                    bankName && accountHolderName && accountNumber && ifscCode ? { accountName: accountHolderName, bankName, accountNumber, ifsc: ifscCode.toUpperCase(), mode: payoutMode } : null
-                  }
-                  onSuccess={(data) => {
-                    const val = parseFloat(withdrawAmount);
-                    if (val < 500) {
-                      alert('Minimum withdrawal is ₹500.');
-                      return;
-                    }
-                    if (withdrawableBalance < val) {
-                      alert('Insufficient balance in your secure wallet.');
-                      return;
-                    }
-                    setWalletBalance((prev) => parseFloat((prev - val).toFixed(2)));
-                    setTransactions((prev) => [{ id: `TX-${Math.floor(1000 + Math.random() * 9000)}`, type: 'withdrawal', asset: 'wallet', amount: val, weight: 0, date: new Date().toISOString().slice(0, 16).replace('T', ' '), status: 'Completed' }, ...prev]);
-                    setWithdrawAmount('');
-                    setUpiId('');
-                    if (user && user.email) {
-                      syncLockedBankDetails(user.email);
-                    }
-                    setShowWithdrawModal(false);
+                <button
+                  type="button"
+                  onClick={handleWithdrawSubmit}
+                  disabled={withdrawSubmitting}
+                  style={{
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    border: 'none',
+                    padding: '16px',
+                    width: '100%',
+                    borderRadius: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    fontWeight: 'bold',
+                    color: '#fff',
+                    cursor: withdrawSubmitting ? 'not-allowed' : 'pointer',
+                    marginTop: '15px',
+                    boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)',
+                    transition: 'all 0.3s ease-in-out'
                   }}
-                  onError={(err) => {
-                    if (err?.response?.data?.error === 'Insufficient wallet balance' || withdrawableBalance < parseFloat(withdrawAmount)) {
-                       alert('Insufficient balance in your secure wallet.');
-                    } else if (parseFloat(withdrawAmount) < 500) {
-                       alert('Minimum withdrawal is ₹500.');
-                    }
-                  }}
-                />
+                >
+                  {withdrawSubmitting ? 'Processing...' : 'Withdraw Funds'}
+                </button>
               </div>
             </div>
           </div>
@@ -9184,53 +9676,7 @@ function App() {
         )}
 
         {/* --- Manual Deposit Modal --- */}
-        {showManualDepositModal && (
-          <div className="modal-overlay" style={{ zIndex: 9999 }}>
-            <div className="modal-content" style={{ maxWidth: '400px', background: '#120524', border: '1px solid rgba(217, 175, 86, 0.3)', boxShadow: '0 10px 40px rgba(0,0,0,0.5)' }}>
-              <div className="modal-header" style={{ borderBottom: '1px solid rgba(217, 175, 86, 0.1)', paddingBottom: '12px' }}>
-                <h3 style={{ color: '#d9af56', margin: 0, fontSize: '18px' }}>Submit Manual Deposit</h3>
-                <button className="btn-close" onClick={() => setShowManualDepositModal(false)} style={{ color: '#9c93a8', border: 'none', background: 'transparent', cursor: 'pointer' }}>
-                  <X size={20} />
-                </button>
-              </div>
-              <form onSubmit={handleManualDepositSubmit} style={{ padding: '20px 0 0 0', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div className="funding-input-group">
-                  <label style={{ fontSize: '12px', color: '#9c93a8' }}>Deposit Amount</label>
-                  <div className="funding-input-field-wrapper" style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '10px', display: 'flex', alignItems: 'center' }}>
-                    <span className="currency-symbol" style={{ color: '#fff' }}>₹</span>
-                    <input type="number" readOnly value={depositAmount} style={{ background: 'transparent', border: 'none', color: '#fff', outline: 'none', width: '100%', fontSize: '16px', marginLeft: '8px' }} />
-                  </div>
-                  <div style={{ fontSize: '10px', color: '#f43f5e', marginTop: '4px' }}>* Change amount in the previous screen if needed.</div>
-                </div>
-
-                <div className="funding-input-group">
-                  <label style={{ fontSize: '12px', color: '#9c93a8' }}>12-Digit UTR / Ref Number</label>
-                  <input type="text" required placeholder="e.g. 123456789012" value={manualUtr} onChange={(e) => setManualUtr(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: '#fff', outline: 'none' }} />
-                </div>
-
-                <div className="funding-input-group">
-                  <label style={{ fontSize: '12px', color: '#9c93a8' }}>Payment Method</label>
-                  <select required value={manualPaymentMethod} onChange={(e) => setManualPaymentMethod(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: '#fff', outline: 'none' }}>
-                    <option value="UPI" style={{ background: '#120524' }}>UPI</option>
-                    <option value="Bank Transfer" style={{ background: '#120524' }}>Bank Transfer</option>
-                    <option value="Net Banking" style={{ background: '#120524' }}>Net Banking</option>
-                    <option value="Wallet" style={{ background: '#120524' }}>Wallet</option>
-                    <option value="Others" style={{ background: '#120524' }}>Others</option>
-                  </select>
-                </div>
-
-                <div className="funding-input-group">
-                  <label style={{ fontSize: '12px', color: '#9c93a8' }}>Payment Screenshot</label>
-                  <input type="file" required accept="image/*" onChange={(e) => setManualScreenshot(e.target.files[0])} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px dashed rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.3)', color: '#fff' }} />
-                </div>
-
-                <button type="submit" disabled={manualDepositSubmitting} style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#fff', border: 'none', padding: '14px', borderRadius: '8px', fontWeight: 'bold', cursor: manualDepositSubmitting ? 'not-allowed' : 'pointer', marginTop: '10px' }}>
-                  {manualDepositSubmitting ? 'Submitting...' : 'Submit for Verification'}
-                </button>
-              </form>
-            </div>
-          </div>
-        )}
+        {renderManualDepositModal()}
       </div>
     );
   }
