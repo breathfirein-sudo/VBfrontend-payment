@@ -847,16 +847,14 @@ function App() {
 
                 {/* UTR Input */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '11px', color: '#9c93a8', textTransform: 'uppercase', letterSpacing: '0.8px', fontWeight: 700 }}>12-Digit UTR / Ref Number</label>
+                  <label style={{ fontSize: '11px', color: '#9c93a8', textTransform: 'uppercase', letterSpacing: '0.8px', fontWeight: 700 }}>UTR / Transaction Ref Number</label>
                   <input 
                     type="text" 
                     required 
-                    maxLength={12}
-                    pattern="\d{12}"
-                    title="Please enter exactly 12 numeric digits"
-                    placeholder="Enter 12-digit transaction ID" 
+                    maxLength={30}
+                    placeholder="Enter UTR or Reference Number" 
                     value={manualUtr} 
-                    onChange={(e) => setManualUtr(e.target.value.replace(/\D/g, ''))} 
+                    onChange={(e) => setManualUtr(e.target.value.trim())} 
                     style={{ 
                       width: '100%', 
                       padding: '10px 14px', 
