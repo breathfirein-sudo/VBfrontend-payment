@@ -387,7 +387,7 @@ function App() {
   
   useEffect(() => { localStorage.setItem('vb_view', view); }, [view]);
   const [authTab, setAuthTab] = useState('login'); // 'login' or 'register'
-  const [authRole, setAuthRole] = useState(isSupportSubdomain ? 'support' : 'client'); // 'client' or 'support'
+  const [authRole, setAuthRole] = useState('client'); // 'client' or 'support'
   const [authForm, setAuthForm] = useState({ name: '', email: '', phone: '', password: '', referralCode: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [signupStep, setSignupStep] = useState('details'); // 'details' or 'verify'
@@ -8568,22 +8568,29 @@ function App() {
       <div id="root" className="auth-page-view">
         <header className="header">
           <div className="container nav-container">
-            <div className="logo-section" onClick={() => { if (!isSupportSubdomain) setView('home'); }} style={{ cursor: isSupportSubdomain ? 'default' : 'pointer' }}>
+            <div className="logo-section" onClick={() => setView('home')} style={{ cursor: 'pointer' }}>
               <InvesthourLogoText />
             </div>
-            {!isSupportSubdomain && <button type="button" className="btn-signin" onClick={() => setView('home')}>Back to Home</button>}
+            <button type="button" className="btn-signin" onClick={() => setView('home')}>Back to Home</button>
           </div>
         </header>
         <div className="auth-container">
           <div className="auth-card animate-fade-in">
 
-            {authTab !== 'forgot' && !isSupportSubdomain && (
-              <div className="auth-tabs">
-                <button type="button" className={`auth-tab-btn ${authTab === 'login' ? 'active' : ''}`} onClick={() => { setAuthTab('login'); setShowPassword(false); }}>Sign In</button>
-                {authRole === 'client' && (
-                  <button type="button" className={`auth-tab-btn ${authTab === 'register' ? 'active' : ''}`} onClick={() => { setAuthTab('register'); setShowPassword(false); }}>Sign Up</button>
-                )}
-              </div>
+            {authTab !== 'forgot' && (
+              <>
+                {/* Role Toggle: Client / Support Staff */}
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '0', marginBottom: '16px', background: 'rgba(255,255,255,0.04)', borderRadius: '10px', padding: '4px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <button type="button" onClick={() => { setAuthRole('client'); setAuthTab('login'); }} style={{ flex: 1, padding: '10px 0', borderRadius: '8px', border: 'none', fontSize: '13px', fontWeight: 700, cursor: 'pointer', transition: 'all 0.25s', background: authRole === 'client' ? 'linear-gradient(135deg, #d4a84b, #c4943f)' : 'transparent', color: authRole === 'client' ? '#000' : 'rgba(255,255,255,0.5)', boxShadow: authRole === 'client' ? '0 2px 8px rgba(212,168,75,0.3)' : 'none' }}>👤 Client</button>
+                  <button type="button" onClick={() => { setAuthRole('support'); setAuthTab('login'); }} style={{ flex: 1, padding: '10px 0', borderRadius: '8px', border: 'none', fontSize: '13px', fontWeight: 700, cursor: 'pointer', transition: 'all 0.25s', background: authRole === 'support' ? 'linear-gradient(135deg, #7c3aed, #6366f1)' : 'transparent', color: authRole === 'support' ? '#fff' : 'rgba(255,255,255,0.5)', boxShadow: authRole === 'support' ? '0 2px 8px rgba(124,58,237,0.3)' : 'none' }}>🛡️ Support Staff</button>
+                </div>
+                <div className="auth-tabs">
+                  <button type="button" className={`auth-tab-btn ${authTab === 'login' ? 'active' : ''}`} onClick={() => { setAuthTab('login'); setShowPassword(false); }}>Sign In</button>
+                  {authRole === 'client' && (
+                    <button type="button" className={`auth-tab-btn ${authTab === 'register' ? 'active' : ''}`} onClick={() => { setAuthTab('register'); setShowPassword(false); }}>Sign Up</button>
+                  )}
+                </div>
+              </>
             )}
             {authTab === 'forgot' ? (
               <form className="auth-form" onSubmit={handleForgotPasswordRequest}>
@@ -8655,8 +8662,8 @@ function App() {
             ) : authTab === 'login' ? (
               <form className="auth-form" onSubmit={handleSignInStart}>
                 <div className="auth-form-header">
-                  <h2>{isSupportSubdomain ? 'Support Staff Sign In' : 'Welcome Back'}</h2>
-                  <p>{isSupportSubdomain ? 'Access the support console securely' : 'Access your precious metal vault securely'}</p>
+                  <h2>{authRole === 'support' ? 'Support Staff Sign In' : 'Welcome Back'}</h2>
+                  <p>{authRole === 'support' ? 'Access the support console securely' : 'Access your precious metal vault securely'}</p>
                 </div>
                 <div className="auth-input-group">
                   <label>Email or Mobile Number</label>
