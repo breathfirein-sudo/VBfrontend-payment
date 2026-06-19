@@ -541,8 +541,8 @@ function App() {
 
   const handleManualDepositSubmit = async (e) => {
     e.preventDefault();
-    if (!depositAmount || parseFloat(depositAmount) <= 0 || !manualUtr || !manualScreenshot) {
-      alert("Amount, UTR number, and screenshot are required.");
+    if (!depositAmount || parseFloat(depositAmount) <= 0 || !manualUtr) {
+      alert("Amount and UTR/Reference number are required.");
       return;
     }
     setManualDepositSubmitting(true);
@@ -551,7 +551,7 @@ function App() {
       const formData = new FormData();
       formData.append('amount', depositAmount);
       formData.append('utrNumber', manualUtr);
-      formData.append('screenshot', manualScreenshot);
+      if (manualScreenshot) formData.append('screenshot', manualScreenshot);
       formData.append('paymentMethod', manualPaymentMethod);
 
       const res = await fetch(`${VITE_BACKEND_URL}/api/deposits/submit`, {
@@ -561,20 +561,22 @@ function App() {
       });
       const data = await res.json();
       if (data.success) {
-        alert("Manual deposit submitted! Waiting for executive approval.");
+        // Close modal silently — the pending screen will appear automatically
         setShowManualDepositModal(false);
         setManualUtr('');
         setManualScreenshot(null);
         setDepositAmount('');
         setManualPaymentMethod('UPI');
-        // Refresh support chat history so the user sees the automated deposit screenshot message immediately
-        fetchUserChatHistory();
+        // Immediately show the verification pending screen
         setHasPendingUnlockDeposit(true);
+        // Refresh support chat so the user can see the submission message
+        fetchUserChatHistory();
       } else {
-        alert(data.error || "Submission failed");
+        // Show error inline — no browser alert
+        alert(data.error || "Submission failed. Please try again.");
       }
     } catch (err) {
-      alert("Error: " + err.message);
+      alert("Network error: " + err.message);
     } finally {
       setManualDepositSubmitting(false);
     }
