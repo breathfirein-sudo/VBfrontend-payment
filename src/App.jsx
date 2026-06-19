@@ -502,6 +502,7 @@ function App() {
   const [copiedInspectedReferralLink, setCopiedInspectedReferralLink] = useState(false);
   const [successfulReferralsCount, setSuccessfulReferralsCount] = useState(0);
   const [isUnlocked, setIsUnlocked] = useState(false);
+  const [hasPendingUnlockDeposit, setHasPendingUnlockDeposit] = useState(false);
   const [referralsList, setReferralsList] = useState([]);
   const [realtimeWinners, setRealtimeWinners] = useState([]);
   
@@ -568,6 +569,9 @@ function App() {
         setManualPaymentMethod('UPI');
         // Refresh support chat history so the user sees the automated deposit screenshot message immediately
         fetchUserChatHistory();
+        if (parseFloat(depositAmount) === 10) {
+          setHasPendingUnlockDeposit(true);
+        }
       } else {
         alert(data.error || "Submission failed");
       }
@@ -2075,6 +2079,9 @@ function App() {
             if (data.isUnlocked !== undefined) {
               setIsUnlocked(data.isUnlocked);
             }
+            if (data.hasPendingUnlockDeposit !== undefined) {
+              setHasPendingUnlockDeposit(data.hasPendingUnlockDeposit);
+            }
             // ALWAYS use backend balance — it's the authoritative value
             if (data.walletBalance !== undefined) {
               setWalletBalance(data.walletBalance);
@@ -2278,6 +2285,9 @@ function App() {
               }
               if (data.isUnlocked !== undefined) {
                 setIsUnlocked(data.isUnlocked);
+              }
+              if (data.hasPendingUnlockDeposit !== undefined) {
+                setHasPendingUnlockDeposit(data.hasPendingUnlockDeposit);
               }
               if (data.lockedBankDetails) {
                 setLockedBankDetails(data.lockedBankDetails);
@@ -2757,6 +2767,39 @@ function App() {
       return () => clearInterval(interval);
     }
   }, [isChatOpen, user]);
+
+  useEffect(() => {
+    if (user && !user.isExecutive && !isUnlocked) {
+      const checkStatus = async () => {
+        try {
+          const res = await fetch(`${VITE_BACKEND_URL}/api/auth/validate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: user.email })
+          });
+          const data = await res.json();
+          if (data.valid) {
+            if (data.isUnlocked !== undefined) {
+              setIsUnlocked(data.isUnlocked);
+            }
+            if (data.hasPendingUnlockDeposit !== undefined) {
+              setHasPendingUnlockDeposit(data.hasPendingUnlockDeposit);
+            }
+            if (data.walletBalance !== undefined) {
+              setWalletBalance(data.walletBalance);
+            }
+          }
+        } catch (err) {
+          console.error("Error polling user unlock status:", err);
+        }
+      };
+
+      // Poll every 5 seconds for status updates
+      checkStatus();
+      const interval = setInterval(checkStatus, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [user, isUnlocked]);
 
   const handleRequestCallback = async () => {
     try {
@@ -7816,31 +7859,55 @@ function App() {
                   </div>
 
                   <div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setDepositAmount('10');
-                        setShowManualDepositModal(true);
-                      }}
-                      style={{
-                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                        border: 'none',
+                    {hasPendingUnlockDeposit ? (
+                      <div style={{
+                        background: 'linear-gradient(135deg, rgba(217, 175, 86, 0.08) 0%, rgba(217, 175, 86, 0.02) 100%)',
+                        border: '1px solid rgba(217, 175, 86, 0.3)',
                         padding: '16px',
                         width: '100%',
                         borderRadius: '12px',
                         display: 'flex',
+                        flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: '8px',
-                        fontWeight: 'bold',
-                        color: '#fff',
-                        cursor: 'pointer',
-                        boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)',
-                        transition: 'all 0.3s ease-in-out'
-                      }}
-                    >
-                      Pay ₹10 & Submit UTR
-                    </button>
+                        gap: '6px',
+                        boxShadow: '0 4px 14px rgba(217, 175, 86, 0.1)'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ width: '14px', height: '14px', border: '2px solid transparent', borderTopColor: '#d9af56', borderRadius: '50%', display: 'inline-block', animation: 'spin 1s linear infinite' }} />
+                          <span style={{ fontWeight: 'bold', color: '#d9af56', fontSize: '14px' }}>Verification Pending</span>
+                        </div>
+                        <span style={{ fontSize: '11px', color: '#9c93a8', textAlign: 'center', lineHeight: '1.4' }}>
+                          We are verifying your transaction. Your account will unlock automatically.
+                        </span>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDepositAmount('10');
+                          setShowManualDepositModal(true);
+                        }}
+                        style={{
+                          background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                          border: 'none',
+                          padding: '16px',
+                          width: '100%',
+                          borderRadius: '12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          fontWeight: 'bold',
+                          color: '#fff',
+                          cursor: 'pointer',
+                          boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)',
+                          transition: 'all 0.3s ease-in-out'
+                        }}
+                      >
+                        Pay ₹10 & Submit UTR
+                      </button>
+                    )}
                   </div>
                   </div>
                 </div>
