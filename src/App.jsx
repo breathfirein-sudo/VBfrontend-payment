@@ -569,9 +569,7 @@ function App() {
         setManualPaymentMethod('UPI');
         // Refresh support chat history so the user sees the automated deposit screenshot message immediately
         fetchUserChatHistory();
-        if (parseFloat(depositAmount) === 10) {
-          setHasPendingUnlockDeposit(true);
-        }
+        setHasPendingUnlockDeposit(true);
       } else {
         alert(data.error || "Submission failed");
       }
@@ -2769,7 +2767,7 @@ function App() {
   }, [isChatOpen, user]);
 
   useEffect(() => {
-    if (user && !user.isExecutive && !isUnlocked) {
+    if (user && !user.isExecutive && (!isUnlocked || hasPendingUnlockDeposit)) {
       const checkStatus = async () => {
         try {
           const res = await fetch(`${VITE_BACKEND_URL}/api/auth/validate`, {
@@ -2799,7 +2797,7 @@ function App() {
       const interval = setInterval(checkStatus, 5000);
       return () => clearInterval(interval);
     }
-  }, [user, isUnlocked]);
+  }, [user, isUnlocked, hasPendingUnlockDeposit]);
 
   const handleRequestCallback = async () => {
     try {
@@ -8272,23 +8270,48 @@ function App() {
                           <span className="currency-symbol">{'\u20b9'}</span>
                           <input type="number" placeholder="Enter amount (min 100)" value={depositAmount} onChange={(e) => setDepositAmount(e.target.value)} />
                         </div>
-                        <button 
-                          type="button" 
-                          onClick={() => {
-                            const val = parseFloat(depositAmount);
-                            if (!val || val < 100) {
-                              alert("Minimum deposit amount is ₹100");
-                              return;
-                            }
-                            setShowManualDepositModal(true);
-                          }} 
-                          style={{ 
-                            marginTop: '15px', width: '100%', padding: '16px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#fff', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold', transition: 'all 0.3s',
-                            boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)'
-                          }}
-                        >
-                          Proceed to Deposit
-                        </button>
+                        {hasPendingUnlockDeposit ? (
+                          <div style={{
+                            background: 'linear-gradient(135deg, rgba(217, 175, 86, 0.08) 0%, rgba(217, 175, 86, 0.02) 100%)',
+                            border: '1px solid rgba(217, 175, 86, 0.3)',
+                            padding: '16px',
+                            marginTop: '15px',
+                            width: '100%',
+                            borderRadius: '12px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '6px',
+                            boxShadow: '0 4px 14px rgba(217, 175, 86, 0.1)'
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ width: '14px', height: '14px', border: '2px solid transparent', borderTopColor: '#d9af56', borderRadius: '50%', display: 'inline-block', animation: 'spin 1s linear infinite' }} />
+                              <span style={{ fontWeight: 'bold', color: '#d9af56', fontSize: '13px' }}>Verification Pending</span>
+                            </div>
+                            <span style={{ fontSize: '10px', color: '#9c93a8', textAlign: 'center', lineHeight: '1.4' }}>
+                              We are verifying your transaction. Your balance will update automatically.
+                            </span>
+                          </div>
+                        ) : (
+                          <button 
+                            type="button" 
+                            onClick={() => {
+                              const val = parseFloat(depositAmount);
+                              if (!val || val < 100) {
+                                alert("Minimum deposit amount is ₹100");
+                                return;
+                              }
+                              setShowManualDepositModal(true);
+                            }} 
+                            style={{ 
+                              marginTop: '15px', width: '100%', padding: '16px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#fff', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold', transition: 'all 0.3s',
+                              boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)'
+                            }}
+                          >
+                            Proceed to Deposit
+                          </button>
+                        )}
                       </div>
                       <div className="funding-input-group" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                         <button 
