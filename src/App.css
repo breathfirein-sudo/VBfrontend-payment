@@ -821,8 +821,8 @@
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(6, 3, 9, 0.85);
-  backdrop-filter: blur(8px);
+  background-color: rgba(6, 3, 9, 0.88);
+  /* backdrop-filter removed — forces GPU compositing, causes visible lag */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -838,17 +838,17 @@
   max-width: 440px;
   border-radius: 16px;
   overflow: hidden;
-  animation: modal-enter 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: modal-enter 0.15s ease-out;
 }
 
 @keyframes modal-enter {
   from {
-    transform: scale(0.9) translateY(20px);
+    transform: translateY(8px);
     opacity: 0;
   }
 
   to {
-    transform: scale(1) translateY(0);
+    transform: translateY(0);
     opacity: 1;
   }
 }

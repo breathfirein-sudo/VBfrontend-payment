@@ -194,6 +194,8 @@ function App() {
     }
     return token || 'dummy-token-for-dev';
   };
+  // Executive-specific token — stored separately so exec and client sessions don't clash
+  const getExecToken = () => localStorage.getItem('vb_exec_token') || '';
 
   // --- Auth & Profile States ---
   const [user, setUser] = useState(null);
@@ -365,6 +367,7 @@ function App() {
           return next;
         });
         localStorage.removeItem('vb_jwt_token');
+        localStorage.removeItem('vb_exec_token');
         localStorage.removeItem('vb_local_user');
         setUser(null);
         setView(isSupportSubdomain ? 'auth' : 'home');
@@ -380,7 +383,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   
   const [view, setView] = useState(() => {
-    if (isSupportSubdomain && !localStorage.getItem('vb_jwt_token')) return 'auth';
+    if (isSupportSubdomain && !localStorage.getItem('vb_exec_token')) return 'auth';
     return localStorage.getItem('vb_view') || 'home';
   }); // 'home', 'auth', 'dashboard'
   
@@ -465,6 +468,7 @@ function App() {
       const savedLocalUser = localStorage.getItem('vb_local_user');
       if (!savedLocalUser) {
         setView('auth');
+        setAuthRole('client');
         setAuthTab('register');
       }
     }
@@ -583,17 +587,23 @@ function App() {
   };
 
   const renderManualDepositModal = () => {
-    if (!showManualDepositModal) return null;
+    // Always render — visibility is controlled via CSS to avoid expensive DOM mount/unmount on each open
+    const isOpen = showManualDepositModal;
     return (
       <div className="modal-overlay" style={{ 
+        position: 'fixed',
+        inset: 0,
         zIndex: 9999, 
-        backdropFilter: 'blur(8px)', 
-        background: 'rgba(5, 2, 10, 0.8)',
+        // No backdrop-filter: blur — that forces GPU compositing on every frame (very slow)
+        background: 'rgba(5, 2, 10, 0.88)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         padding: '20px',
-        animation: 'fadeIn 0.25s ease-out'
+        opacity: isOpen ? 1 : 0,
+        visibility: isOpen ? 'visible' : 'hidden',
+        pointerEvents: isOpen ? 'all' : 'none',
+        transition: 'opacity 0.12s ease-out, visibility 0.12s'
       }}>
         <div className="modal-content" style={{ 
           maxWidth: '800px', 
@@ -708,9 +718,9 @@ function App() {
                   </button>
                 </div>
 
-                {/* Tab contents */}
-                {manualPayTab === 'upi' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', padding: '5px 0' }}>
+
+                {/* Tab contents — always mounted, CSS-toggled for instant switching */}
+                <div style={{ display: manualPayTab === 'upi' ? 'flex' : 'none', flexDirection: 'column', alignItems: 'center', gap: '10px', padding: '5px 0' }}>
                     <div style={{ 
                       background: '#fff', 
                       padding: '10px', 
@@ -765,10 +775,9 @@ function App() {
                       </button>
                     </div>
                   </div>
-                )}
 
-                {manualPayTab === 'bank' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '5px 0' }}>
+
+                <div style={{ display: manualPayTab === 'bank' ? 'flex' : 'none', flexDirection: 'column', gap: '8px', padding: '5px 0' }}>
                     {[
                       { label: 'Account Holder', value: 'BREATH FIRE', key: 'holder' },
                       { label: 'Account Number', value: '50200068127570', key: 'acc', highlight: true },
@@ -825,7 +834,6 @@ function App() {
                       </div>
                     ))}
                   </div>
-                )}
               </div>
 
               {/* Right Column: Submission Form Inputs */}
@@ -1155,7 +1163,8 @@ function App() {
   const [showAllFeedTx, setShowAllFeedTx] = useState(false); // Transaction feed "show more"
 
   // --- Contest Awards States & Methods ---
-  const [adminTab, setAdminTab] = useState('clients'); // 'clients' or 'contest'
+  const [adminTab, setAdminTab] = useState(() => localStorage.getItem('vb_adminTab') || 'clients');
+  useEffect(() => { localStorage.setItem('vb_adminTab', adminTab); }, [adminTab]);
   const [contestParticipants, setContestParticipants] = useState([]);
   const [selectedContestParticipant, setSelectedContestParticipant] = useState(null);
   const [contestParticipantTrades, setContestParticipantTrades] = useState([]);
@@ -1297,6 +1306,14 @@ function App() {
   const [selectedChatEmail, setSelectedChatEmail] = useState(null);
   const [chatMessages, setChatMessages] = useState([]);
   const [newMessageText, setNewMessageText] = useState('');
+  const [resolvedChatsCount, setResolvedChatsCount] = useState(() => {
+    return parseInt(localStorage.getItem('vb_resolved_chats_count') || '0', 10);
+  });
+
+  useEffect(() => {
+    localStorage.setItem('vb_resolved_chats_count', resolvedChatsCount.toString());
+  }, [resolvedChatsCount]);
+
   const [callRequests, setCallRequests] = useState([]);
   const totalCalls = callRequests.length;
   const pendingCalls = callRequests.filter(r => r.status === 'Pending').length;
@@ -1310,7 +1327,8 @@ function App() {
   const missedPct = Math.round((missedCalls / divisor) * 100);
 
   const [supportLoading, setSupportLoading] = useState(false);
-  const [execTab, setExecTab] = useState('dashboard');
+  const [execTab, setExecTab] = useState(() => localStorage.getItem('vb_execTab') || 'dashboard');
+  useEffect(() => { localStorage.setItem('vb_execTab', execTab); }, [execTab]);
   const [realTimeClock, setRealTimeClock] = useState(new Date());
   const [performanceReport, setPerformanceReport] = useState(null);
 
@@ -1350,7 +1368,7 @@ function App() {
 
   const fetchExecProfile = async () => {
     try {
-      const token = localStorage.getItem('vb_jwt_token');
+      const token = getExecToken();
       if (!token) return;
       const res = await fetch(`${VITE_BACKEND_URL}/api/support/profile`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -1366,7 +1384,7 @@ function App() {
 
   const handleClockIn = async () => {
     try {
-      const token = localStorage.getItem('vb_jwt_token');
+      const token = getExecToken();
       const res = await fetch(`${VITE_BACKEND_URL}/api/support/attendance/clock-in`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
@@ -1385,7 +1403,7 @@ function App() {
 
   const handleClockOut = async () => {
     try {
-      const token = localStorage.getItem('vb_jwt_token');
+      const token = getExecToken();
       const res = await fetch(`${VITE_BACKEND_URL}/api/support/attendance/clock-out`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
@@ -1404,7 +1422,7 @@ function App() {
 
   const fetchActiveChats = async () => {
     try {
-      const token = localStorage.getItem('vb_jwt_token');
+      const token = getExecToken();
       if (!token) return;
       const res = await fetch(`${VITE_BACKEND_URL}/api/support/chats`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -1420,7 +1438,7 @@ function App() {
 
   const fetchChatMessages = async (email) => {
     try {
-      const token = localStorage.getItem('vb_jwt_token');
+      const token = getExecToken();
       if (!token) return;
       const res = await fetch(`${VITE_BACKEND_URL}/api/support/chats/${email}`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -1439,7 +1457,7 @@ function App() {
     if (!newMessageText.trim() || !selectedChatEmail) return;
 
     try {
-      const token = localStorage.getItem('vb_jwt_token');
+      const token = getExecToken();
       const res = await fetch(`${VITE_BACKEND_URL}/api/support/chats/send`, {
         method: 'POST',
         headers: { 
@@ -1459,9 +1477,31 @@ function App() {
     }
   };
 
+  const handleResolveThread = async (email) => {
+    if (!email) return;
+    try {
+      const token = getExecToken();
+      const res = await fetch(`${VITE_BACKEND_URL}/api/support/chats/${email}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSelectedChatEmail(null);
+        fetchActiveChats();
+        setResolvedChatsCount(prev => prev + 1);
+        alert("Thread resolved successfully!");
+      } else {
+        alert(data.error || "Failed to resolve thread");
+      }
+    } catch (err) {
+      alert("Network error: " + err.message);
+    }
+  };
+
   const fetchCallRequests = async () => {
     try {
-      const token = localStorage.getItem('vb_jwt_token');
+      const token = getExecToken();
       if (!token) return;
       const res = await fetch(`${VITE_BACKEND_URL}/api/support/call-requests`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -1478,7 +1518,7 @@ function App() {
   const [pendingDeposits, setPendingDeposits] = useState([]);
   const fetchPendingDeposits = async () => {
     try {
-      const token = localStorage.getItem('vb_jwt_token');
+      const token = getExecToken();
       if (!token) return;
       const res = await fetch(`${VITE_BACKEND_URL}/api/deposits/pending`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -1518,7 +1558,7 @@ function App() {
 
   const fetchManualDepositsList = async () => {
     try {
-      const token = localStorage.getItem('vb_jwt_token');
+      const token = getExecToken();
       if (!token) return;
       
       const params = new URLSearchParams({
@@ -1544,7 +1584,7 @@ function App() {
 
   const fetchPerformanceReport = async () => {
     try {
-      const token = localStorage.getItem('vb_jwt_token');
+      const token = getExecToken();
       if (!token) return;
       const res = await fetch(`${VITE_BACKEND_URL}/api/support/performance-report`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -1560,7 +1600,7 @@ function App() {
 
   const handleDepositAction = async (id, action) => {
     try {
-      const token = localStorage.getItem('vb_jwt_token');
+      const token = getExecToken();
       const res = await fetch(`${VITE_BACKEND_URL}/api/deposits/${id}/action`, {
         method: 'POST',
         headers: { 
@@ -1584,7 +1624,7 @@ function App() {
 
   const handleUpdateCallStatus = async (id, status) => {
     try {
-      const token = localStorage.getItem('vb_jwt_token');
+      const token = getExecToken();
       const res = await fetch(`${VITE_BACKEND_URL}/api/support/call-requests/${id}/status`, {
         method: 'POST',
         headers: { 
@@ -1625,7 +1665,7 @@ function App() {
 
       return () => clearInterval(interval);
     }
-  }, [view, user, depositFilterStatus, depositSearch, depositPage, depositLimit]);
+  }, [view, user, depositFilterStatus, depositSearch, depositPage, depositLimit, selectedChatEmail, execTab]);
 
   // Real-time clock ticker for shift progress bar
   useEffect(() => {
@@ -1969,6 +2009,9 @@ function App() {
     { sender: 'bot', text: 'Hello! Welcome to Investhour. How can I help you invest in precious metals today?' }
   ]);
 
+  const latestBotMsg = chatHistory.slice().reverse().find(msg => msg.sender === 'bot' && msg.execName);
+  const assignedAgentName = latestBotMsg ? latestBotMsg.execName : null;
+
   // Price Flashing effect triggers
   const [priceFlash, setPriceFlash] = useState(false);
   const prevPriceRef = useRef(INITIAL_RATES.iron.price);
@@ -2240,21 +2283,57 @@ function App() {
       }, remaining);
     };
 
+    const savedExecUser = localStorage.getItem('vb_exec_user');
     const savedLocalUser = localStorage.getItem('vb_local_user');
+
+    if (savedExecUser && localStorage.getItem('vb_exec_token')) {
+      try {
+        const execParsed = JSON.parse(savedExecUser);
+        if (execParsed.isExecutive) {
+          setUser(execParsed);
+          setView('support-dashboard');
+          finishLoading();
+          return;
+        }
+      } catch (e) { /* ignore parse error */ }
+    }
+
     if (savedLocalUser) {
       try {
         const parsed = JSON.parse(savedLocalUser);
-        
+        // On support subdomain: check exec user first
         if (isSupportSubdomain && !parsed.isExecutive) {
+          // Check if there's a separate exec user stored
+          const savedExecUser = localStorage.getItem('vb_exec_user');
+          if (savedExecUser) {
+            try {
+              const execParsed = JSON.parse(savedExecUser);
+              if (execParsed.isExecutive) {
+                setUser(execParsed);
+                setView('support-dashboard');
+                finishLoading();
+                return;
+              }
+            } catch (e) { /* ignore parse error */ }
+          }
           localStorage.removeItem('vb_local_user');
           localStorage.removeItem('vb_jwt_token');
+          localStorage.removeItem('vb_exec_token');
           setUser(null);
           setView('auth');
+          setAuthRole('client');
           finishLoading();
           return;
         }
 
         if (parsed.isExecutive) {
+          // Migrate: if exec token is in old key (vb_jwt_token) but not new key (vb_exec_token), copy it
+          // Don't delete vb_jwt_token — it may belong to a concurrent client session on another tab
+          if (!localStorage.getItem('vb_exec_token') && localStorage.getItem('vb_jwt_token')) {
+            localStorage.setItem('vb_exec_token', localStorage.getItem('vb_jwt_token'));
+          }
+          // Migrate old exec data from vb_local_user to vb_exec_user
+          localStorage.setItem('vb_exec_user', savedLocalUser);
           setUser(parsed);
           setView('support-dashboard');
           finishLoading();
@@ -2514,8 +2593,8 @@ function App() {
           role: data.executive.role,
           id: data.executive.id
         };
-        localStorage.setItem('vb_jwt_token', data.token);
-        localStorage.setItem('vb_local_user', JSON.stringify(localUser));
+        localStorage.setItem('vb_exec_token', data.token);
+        localStorage.setItem('vb_exec_user', JSON.stringify(localUser));
         setUser(localUser);
         setLoading(true);
         setView('support-dashboard');
@@ -2731,6 +2810,7 @@ function App() {
   const handleSignOut = async () => {
     localStorage.removeItem('vb_local_user');
     localStorage.removeItem('vb_jwt_token');
+    localStorage.removeItem('vb_exec_token');
     setUser(null);
     setView(isSupportSubdomain ? 'auth' : 'home');
   };
@@ -2749,7 +2829,8 @@ function App() {
           sender: msg.sender === 'user' ? 'user' : 'bot',
           text: msg.text,
           mediaUrl: msg.mediaUrl,
-          createdAt: msg.createdAt
+          createdAt: msg.createdAt,
+          execName: msg.execName
         }));
         setChatHistory(mapped);
       }
@@ -2930,7 +3011,7 @@ function App() {
       const mediaUrl = uploadData.fileUrl;
       const fileName = uploadData.fileName;
 
-      const token = localStorage.getItem('vb_jwt_token');
+      const token = getExecToken();
       const res = await fetch(`${VITE_BACKEND_URL}/api/support/chats/send`, {
         method: 'POST',
         headers: { 
@@ -2959,7 +3040,7 @@ function App() {
   const handleSaveSettings = async (e) => {
     if (e) e.preventDefault();
     try {
-      const token = localStorage.getItem('vb_jwt_token');
+      const token = getExecToken();
       const payloadSettings = {
         preferredLanguage: settingsPrefLang,
         timezone: settingsTimezone,
@@ -2997,7 +3078,7 @@ function App() {
 
   const saveSettingItem = async (updates) => {
     try {
-      const token = localStorage.getItem('vb_jwt_token');
+      const token = getExecToken();
       if (!token) return;
 
       const currentSettings = execProfile?.settings || {};
@@ -3008,7 +3089,8 @@ function App() {
         notifBrowser: updates.notifBrowser !== undefined ? updates.notifBrowser : (currentSettings.notifBrowser !== undefined ? currentSettings.notifBrowser : notifBrowser),
         notifSMS: updates.notifSMS !== undefined ? updates.notifSMS : (currentSettings.notifSMS !== undefined ? currentSettings.notifSMS : notifSMS),
         notifShiftReminders: updates.notifShiftReminders !== undefined ? updates.notifShiftReminders : (currentSettings.notifShiftReminders !== undefined ? currentSettings.notifShiftReminders : notifShiftReminders),
-        themePref: updates.themePref !== undefined ? updates.themePref : (currentSettings.themePref || themePref)
+        themePref: updates.themePref !== undefined ? updates.themePref : (currentSettings.themePref || themePref),
+        photoUrl: updates.photoUrl !== undefined ? updates.photoUrl : (currentSettings.photoUrl || '')
       };
 
       const payload = {
@@ -3052,7 +3134,7 @@ function App() {
       return;
     }
     try {
-      const token = localStorage.getItem('vb_jwt_token');
+      const token = getExecToken();
       const res = await fetch(`${VITE_BACKEND_URL}/api/support/profile/change-password`, {
         method: 'POST',
         headers: { 
@@ -3088,7 +3170,7 @@ function App() {
     }
     setFirstTimeSaving(true);
     try {
-      const token = localStorage.getItem('vb_jwt_token');
+      const token = getExecToken();
       const res = await fetch(`${VITE_BACKEND_URL}/api/support/profile/change-password`, {
         method: 'POST',
         headers: { 
@@ -5669,9 +5751,9 @@ function App() {
               );
             })()}
 
-            {/* Top Row: Callbacks & Deposits - shown on dashboard */}
+            {/* Top Row: Callbacks, Deposits & Chats - shown on dashboard */}
             {execTab === 'dashboard' && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '24px' }}>
               
               {/* Callback Request Queue (Dashboard only) */}
               {execTab === 'dashboard' && (
@@ -5759,6 +5841,52 @@ function App() {
                 ) : (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#6b7280' }}>
                     <CheckCircle2 size={16} color="#10b981" /> No pending deposits to review.
+                  </div>
+                )}
+              </div>
+              )}
+
+              {/* Active Chat Threads (Dashboard only) */}
+              {execTab === 'dashboard' && (
+              <div style={{ background: '#ffffff', borderRadius: '16px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e5e7eb' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                  <div style={{ width: '48px', height: '48px', background: '#ecfdf5', color: '#10b981', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <MessageSquare size={24} />
+                  </div>
+                  <div style={{ width: '40px', height: '40px', background: '#ffffff', color: '#10b981', borderRadius: '50%', border: '2px solid #ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <User size={20} />
+                  </div>
+                </div>
+                <div style={{ color: '#4b5563', fontSize: '12px', fontWeight: 700, letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: '4px' }}>Active Chat Threads</div>
+                <div style={{ fontSize: '32px', fontWeight: 800, color: '#111827', display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                  {activeChats.length} <span style={{ fontSize: '14px', fontWeight: 500, color: '#6b7280', textTransform: 'none' }}>Active</span>
+                </div>
+                <div style={{ borderTop: '1px solid #e5e7eb', margin: '16px 0', padding: 0 }}></div>
+                
+                {activeChats.length > 0 ? (
+                  <div style={{ display: 'grid', gap: '8px', maxHeight: '180px', overflowY: 'auto' }}>
+                    {activeChats.map(chat => (
+                      <div key={chat.userEmail} style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ flex: 1, minWidth: 0, marginRight: '8px' }}>
+                          <div style={{ fontWeight: 700, fontSize: '13px', color: '#111827', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{chat.userEmail}</div>
+                          <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{chat.lastText}</div>
+                          <div style={{ fontSize: '9px', color: '#9ca3af', marginTop: '4px' }}>{chat.messageCount} messages · {new Date(chat.lastTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                        </div>
+                        <button 
+                          onClick={() => {
+                            setExecTab('chats');
+                            setSelectedChatEmail(chat.userEmail);
+                          }} 
+                          style={{ background: '#6366f1', border: 'none', color: '#fff', fontSize: '11px', fontWeight: 700, padding: '6px 10px', borderRadius: '4px', cursor: 'pointer', flexShrink: 0 }}
+                        >
+                          Open
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#6b7280' }}>
+                    <CheckCircle2 size={16} color="#10b981" /> No active chat conversations.
                   </div>
                 )}
               </div>
@@ -6778,9 +6906,9 @@ function App() {
                     <div style={{ background: '#ffffff', borderRadius: '16px', padding: '20px', border: '1px solid #f0f0f5', boxShadow: '0 2px 10px rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', gap: '16px' }}>
                       <div style={{ width: '48px', height: '48px', background: '#ecfdf5', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#10b981', flexShrink: 0 }}><CheckCircle2 size={22} /></div>
                       <div>
-                        <div style={{ fontSize: '12px', fontWeight: 600, color: '#4b5563' }}>Closed Calls</div>
-                        <div style={{ fontSize: '24px', fontWeight: 800, color: '#111827', lineHeight: 1.2 }}>{callRequests.filter(r => r.status === 'Closed').length}</div>
-                        <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: 600, marginTop: '2px' }}>Resolved calls</div>
+                        <div style={{ fontSize: '12px', fontWeight: 600, color: '#4b5563' }}>Closed Chats</div>
+                        <div style={{ fontSize: '24px', fontWeight: 800, color: '#111827', lineHeight: 1.2 }}>{resolvedChatsCount}</div>
+                        <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: 600, marginTop: '2px' }}>Resolved chats</div>
                       </div>
                     </div>
                   </div>
@@ -6993,8 +7121,7 @@ function App() {
                               disabled={!selectedChatEmail} 
                               onClick={() => {
                                 if (window.confirm("Resolve and close this conversation thread?")) {
-                                  setSelectedChatEmail(null);
-                                  alert("Thread resolved successfully!");
+                                  handleResolveThread(selectedChatEmail);
                                 }
                               }} 
                               style={{ width: '100%', background: selectedChatEmail ? '#f0fdf4' : '#f9fafb', border: `1px solid ${selectedChatEmail ? '#bbf7d0' : '#e5e7eb'}`, color: selectedChatEmail ? '#16a34a' : '#9ca3af', padding: '10px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: selectedChatEmail ? 'pointer' : 'not-allowed' }}
@@ -7486,13 +7613,45 @@ function App() {
 
                         {/* Profile Photo Area (Right) */}
                         <div style={{ width: '180px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderLeft: themeCardBorder, paddingLeft: '30px' }}>
-                          <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: isDarkTheme ? 'rgba(124, 58, 237, 0.15)' : '#f3e8ff', color: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px', boxShadow: '0 4px 10px rgba(124, 58, 237, 0.1)' }}>
-                            <User size={36} />
+                          <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: isDarkTheme ? 'rgba(124, 58, 237, 0.15)' : '#f3e8ff', color: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px', boxShadow: '0 4px 10px rgba(124, 58, 237, 0.1)', overflow: 'hidden' }}>
+                            {execProfile?.settings?.photoUrl ? (
+                              <img src={`${VITE_BACKEND_URL}${execProfile.settings.photoUrl}`} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                              <User size={36} />
+                            )}
                           </div>
                           <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', padding: '14px', borderRadius: '10px', border: '1.5px dashed #7c3aed', background: isDarkTheme ? 'rgba(124, 58, 237, 0.05)' : '#fbfbfe', cursor: 'pointer', width: '100%', boxSizing: 'border-box' }} title="Upload profile photo">
                             <Upload size={16} color="#7c3aed" />
                             <span style={{ fontSize: '11px', fontWeight: 700, color: '#7c3aed' }}>Upload Photo</span>
-                            <input type="file" accept="image/*" style={{ display: 'none' }} onChange={() => alert("Photo upload coming soon!")} />
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              style={{ display: 'none' }} 
+                              onChange={async (e) => {
+                                const file = e.target.files[0];
+                                if (!file) return;
+                                try {
+                                  const formData = new FormData();
+                                  formData.append('file', file);
+                                  const token = getExecToken();
+                                  const uploadRes = await fetch(`${VITE_BACKEND_URL}/api/support/upload`, {
+                                    method: 'POST',
+                                    headers: {
+                                      'Authorization': `Bearer ${token}`
+                                    },
+                                    body: formData
+                                  });
+                                  const uploadData = await uploadRes.json();
+                                  if (uploadData.success) {
+                                    await saveSettingItem({ photoUrl: uploadData.fileUrl });
+                                  } else {
+                                    alert(uploadData.error || "Failed to upload photo");
+                                  }
+                                } catch (err) {
+                                  alert("Error uploading photo: " + err.message);
+                                }
+                              }} 
+                            />
                           </label>
                           <span style={{ fontSize: '9px', color: '#9ca3af', marginTop: '8px', fontWeight: 600 }}>JPG, PNG or GIF. Max 2MB</span>
                         </div>
@@ -8778,10 +8937,15 @@ function App() {
             <div style={chatPanelStyle}>
               <div style={chatHeaderStyle}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={chatAvatarStyle}>IH</div>
+                  <div style={chatAvatarStyle}>{assignedAgentName ? assignedAgentName.slice(0, 2).toUpperCase() : 'IH'}</div>
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: '14px' }}>Investhour Advisor</div>
-                    <div style={{ fontSize: '11px', color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}><span style={chatOnlineDotStyle}></span> Online Help Desk</div>
+                    <div style={{ fontWeight: 700, fontSize: '14px' }}>
+                      {assignedAgentName ? `${assignedAgentName} (Advisor)` : 'Investhour Advisor'}
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={chatOnlineDotStyle}></span> 
+                      {assignedAgentName ? 'Assigned to your chat' : 'Online Help Desk'}
+                    </div>
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -8811,6 +8975,26 @@ function App() {
                 </div>
               </div>
               <div style={chatBodyStyle}>
+                {assignedAgentName && (
+                  <div style={{ 
+                    background: 'rgba(168, 85, 247, 0.12)', 
+                    border: '1px solid rgba(168, 85, 247, 0.25)', 
+                    color: '#d8b4fe', 
+                    padding: '8px 12px', 
+                    borderRadius: '8px', 
+                    fontSize: '11px', 
+                    fontWeight: 'bold',
+                    textAlign: 'center', 
+                    marginBottom: '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px'
+                  }}>
+                    <Shield size={12} style={{ color: '#c084fc' }} />
+                    <span>Assigned to Support Executive: <strong>{assignedAgentName}</strong></span>
+                  </div>
+                )}
                 {chatHistory.map((msg, idx) => (
                   <div key={idx} style={{ display: 'flex', justifyContent: msg.sender === 'user' ? 'flex-end' : 'flex-start', marginBottom: '12px' }}>
                     <div style={{ backgroundColor: msg.sender === 'user' ? '#a855f7' : '#270f44', color: '#ffffff', padding: '10px 14px', borderRadius: msg.sender === 'user' ? '14px 14px 2px 14px' : '14px 14px 14px 2px', maxWidth: '80%', fontSize: '13px', lineHeight: 1.4, boxShadow: '0 2px 6px rgba(0,0,0,0.1)' }}>
@@ -9049,6 +9233,9 @@ function App() {
             </div>
           </div>
         )}
+
+        {/* --- Manual Deposit Modal --- */}
+        {renderManualDepositModal()}
       </div>
     );
   }
@@ -9144,7 +9331,7 @@ function App() {
             <button
               type="button"
               className="btn-auth-submit"
-              onClick={() => { setView('auth'); setAuthTab('login'); }}
+              onClick={() => { setView('auth'); setAuthRole('client'); setAuthTab('login'); }}
             >
               Go to Sign In
             </button>
@@ -9170,11 +9357,6 @@ function App() {
 
             {authTab !== 'forgot' && (
               <>
-                {/* Role Toggle: Client / Support Staff */}
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '0', marginBottom: '16px', background: 'rgba(255,255,255,0.04)', borderRadius: '10px', padding: '4px', border: '1px solid rgba(255,255,255,0.08)' }}>
-                  <button type="button" onClick={() => { setAuthRole('client'); setAuthTab('login'); }} style={{ flex: 1, padding: '10px 0', borderRadius: '8px', border: 'none', fontSize: '13px', fontWeight: 700, cursor: 'pointer', transition: 'all 0.25s', background: authRole === 'client' ? 'linear-gradient(135deg, #d4a84b, #c4943f)' : 'transparent', color: authRole === 'client' ? '#000' : 'rgba(255,255,255,0.5)', boxShadow: authRole === 'client' ? '0 2px 8px rgba(212,168,75,0.3)' : 'none' }}>👤 Client</button>
-                  <button type="button" onClick={() => { setAuthRole('support'); setAuthTab('login'); }} style={{ flex: 1, padding: '10px 0', borderRadius: '8px', border: 'none', fontSize: '13px', fontWeight: 700, cursor: 'pointer', transition: 'all 0.25s', background: authRole === 'support' ? 'linear-gradient(135deg, #7c3aed, #6366f1)' : 'transparent', color: authRole === 'support' ? '#fff' : 'rgba(255,255,255,0.5)', boxShadow: authRole === 'support' ? '0 2px 8px rgba(124,58,237,0.3)' : 'none' }}>🛡️ Support Staff</button>
-                </div>
                 <div className="auth-tabs">
                   <button type="button" className={`auth-tab-btn ${authTab === 'login' ? 'active' : ''}`} onClick={() => { setAuthTab('login'); setShowPassword(false); }}>Sign In</button>
                   {authRole === 'client' && (
@@ -9374,78 +9556,87 @@ function App() {
               <InvesthourLogoText />
             </div>
             
+            <button 
+              type="button" 
+              className="hamburger-btn" 
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              aria-label="Toggle Menu"
+            >
+              {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
+            
             {user && (
-              <>
+              <nav className={`nav-menu dashboard-nav ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
                 <button 
-                  type="button" 
-                  className="hamburger-btn" 
-                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                  aria-label="Toggle Menu"
+                  className="dash-nav-item"
+                  onClick={() => { setView('home'); setIsMobileMenuOpen(false); }}
                 >
-                  {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+                  <Home size={16} /> Home
                 </button>
-                <nav className={`nav-menu dashboard-nav ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
-                  <button 
-                    className="dash-nav-item"
-                    onClick={() => { setView('home'); setIsMobileMenuOpen(false); }}
-                  >
-                    <Home size={16} /> Home
-                  </button>
-                  <button 
-                    className="dash-nav-item"
-                    onClick={() => { setView('dashboard'); setDashTab('portfolio'); setIsMobileMenuOpen(false); }}
-                  >
-                    <Briefcase size={16} /> Portfolio
-                  </button>
-                  <button 
-                    className="dash-nav-item"
-                    onClick={() => { setView('dashboard'); setDashTab('trade'); setIsMobileMenuOpen(false); }}
-                  >
-                    <ArrowRightLeft size={16} /> Trade
-                  </button>
-                  <button 
-                    className="dash-nav-item"
-                    onClick={() => { setView('dashboard'); setDashTab('wallet'); setIsMobileMenuOpen(false); }}
-                  >
-                    <Wallet size={16} /> Wallet
-                  </button>
-                  <button 
-                    className="dash-nav-item"
-                    onClick={() => { setView('dashboard'); setDashTab('contest'); setIsMobileMenuOpen(false); }}
-                  >
-                    <Star size={16} /> Contest Awards
-                  </button>
-                  <button 
-                    className="dash-nav-item"
-                    onClick={() => { setView('about'); setIsMobileMenuOpen(false); }}
-                  >
-                    <Gem size={16} /> Explore Elements
-                  </button>
-                  <button 
-                    className="dash-nav-item"
-                    onClick={() => { setView('dashboard'); setDashTab('referral'); setIsMobileMenuOpen(false); }}
-                  >
-                    <Gift size={16} /> Referral Program
-                  </button>
-                  <button 
-                    className="dash-nav-item"
-                    onClick={() => { setView('dashboard'); setDashTab('profile'); setIsMobileMenuOpen(false); }}
-                  >
-                    <User size={16} /> Vault Profile
-                  </button>
-                  {user && (
-                    <div className="mobile-user-badge">
-                      <div className="user-info-text">
-                        <span className="user-email-text">{user.email}</span>
-                        <span className="kyc-badge">{user.email === 'sandeepkumar.pikili@vrpigroup.co.in' ? 'ADMIN' : 'KYC SECURED'}</span>
-                      </div>
-                      <button type="button" className="btn-sec-signout" onClick={handleSignOut} title="Secure Sign Out">
-                        <LogOut size={16} /> Sign Out
-                      </button>
+                <button 
+                  className="dash-nav-item"
+                  onClick={() => { setView('dashboard'); setDashTab('portfolio'); setIsMobileMenuOpen(false); }}
+                >
+                  <Briefcase size={16} /> Portfolio
+                </button>
+                <button 
+                  className="dash-nav-item"
+                  onClick={() => { setView('dashboard'); setDashTab('trade'); setIsMobileMenuOpen(false); }}
+                >
+                  <ArrowRightLeft size={16} /> Trade
+                </button>
+                <button 
+                  className="dash-nav-item"
+                  onClick={() => { setView('dashboard'); setDashTab('wallet'); setIsMobileMenuOpen(false); }}
+                >
+                  <Wallet size={16} /> Wallet
+                </button>
+                <button 
+                  className="dash-nav-item active"
+                  onClick={() => { setView('dashboard'); setDashTab('contest'); setIsMobileMenuOpen(false); }}
+                >
+                  <Star size={16} /> Contest Awards
+                </button>
+                <button 
+                  className="dash-nav-item"
+                  onClick={() => { setView('about'); setIsMobileMenuOpen(false); }}
+                >
+                  <Gem size={16} /> Explore Elements
+                </button>
+                <button 
+                  className="dash-nav-item"
+                  onClick={() => { setView('dashboard'); setDashTab('referral'); setIsMobileMenuOpen(false); }}
+                >
+                  <Gift size={16} /> Referral Program
+                </button>
+                <button 
+                  className="dash-nav-item"
+                  onClick={() => { setView('dashboard'); setDashTab('profile'); setIsMobileMenuOpen(false); }}
+                >
+                  <User size={16} /> Vault Profile
+                </button>
+                {user && (
+                  <div className="mobile-user-badge">
+                    <div className="user-info-text">
+                      <span className="user-email-text">{user.email}</span>
+                      <span className="kyc-badge">{user.email === 'sandeepkumar.pikili@vrpigroup.co.in' ? 'ADMIN' : 'KYC SECURED'}</span>
                     </div>
-                  )}
-                </nav>
-              </>
+                    <button type="button" className="btn-sec-signout" onClick={handleSignOut} title="Secure Sign Out">
+                      <LogOut size={16} /> Sign Out
+                    </button>
+                  </div>
+                )}
+              </nav>
+            )}
+
+            {!user && (
+              <nav className={`nav-menu ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
+                <a href="#home" className="nav-item" onClick={(e) => { e.preventDefault(); setView('home'); setIsMobileMenuOpen(false); }}>Home</a>
+                <a href="#contest" className="nav-item active" onClick={(e) => { e.preventDefault(); setView('contest-awards'); setIsMobileMenuOpen(false); }}>Contest Awards</a>
+                <a href="#about" className="nav-item" onClick={(e) => { e.preventDefault(); setView('about'); setIsMobileMenuOpen(false); }}>Explore Elements</a>
+                <a href="#referral" className="nav-item" onClick={(e) => { e.preventDefault(); setView('referral-program'); setIsMobileMenuOpen(false); }}>Referral Program</a>
+                <a href="#support-login" className="nav-item" onClick={(e) => { e.preventDefault(); setView('auth'); setAuthRole('support'); setAuthTab('login'); setIsMobileMenuOpen(false); }}>Support Login</a>
+              </nav>
             )}
             
             {user ? (
@@ -9459,7 +9650,7 @@ function App() {
                 </button>
               </div>
             ) : (
-              <button type="button" className="btn-signin" onClick={() => setView('auth')}>Sign In / Sign Up</button>
+              <button type="button" className="btn-signin" onClick={() => { setView('auth'); setAuthRole('client'); }}>Sign In / Sign Up</button>
             )}
           </div>
         </header>
@@ -9475,6 +9666,7 @@ function App() {
                 setView('dashboard');
               } else {
                 setView('auth');
+                setAuthRole('client');
               }
             }} 
           />
@@ -9492,78 +9684,87 @@ function App() {
               <InvesthourLogoText />
             </div>
             
+            <button 
+              type="button" 
+              className="hamburger-btn" 
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              aria-label="Toggle Menu"
+            >
+              {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
+            
             {user && (
-              <>
+              <nav className={`nav-menu dashboard-nav ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
                 <button 
-                  type="button" 
-                  className="hamburger-btn" 
-                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                  aria-label="Toggle Menu"
+                  className="dash-nav-item"
+                  onClick={() => { setView('home'); setIsMobileMenuOpen(false); }}
                 >
-                  {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+                  <Home size={16} /> Home
                 </button>
-                <nav className={`nav-menu dashboard-nav ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
-                  <button 
-                    className="dash-nav-item"
-                    onClick={() => { setView('home'); setIsMobileMenuOpen(false); }}
-                  >
-                    <Home size={16} /> Home
-                  </button>
-                  <button 
-                    className="dash-nav-item"
-                    onClick={() => { setView('dashboard'); setDashTab('portfolio'); setIsMobileMenuOpen(false); }}
-                  >
-                    <Briefcase size={16} /> Portfolio
-                  </button>
-                  <button 
-                    className="dash-nav-item"
-                    onClick={() => { setView('dashboard'); setDashTab('trade'); setIsMobileMenuOpen(false); }}
-                  >
-                    <ArrowRightLeft size={16} /> Trade
-                  </button>
-                  <button 
-                    className="dash-nav-item"
-                    onClick={() => { setView('dashboard'); setDashTab('wallet'); setIsMobileMenuOpen(false); }}
-                  >
-                    <Wallet size={16} /> Wallet
-                  </button>
-                  <button 
-                    className="dash-nav-item"
-                    onClick={() => { setView('dashboard'); setDashTab('contest'); setIsMobileMenuOpen(false); }}
-                  >
-                    <Star size={16} /> Contest Awards
-                  </button>
-                  <button 
-                    className="dash-nav-item"
-                    onClick={() => { setView('about'); setIsMobileMenuOpen(false); }}
-                  >
-                    <Gem size={16} /> Explore Elements
-                  </button>
-                  <button 
-                    className="dash-nav-item"
-                    onClick={() => { setView('dashboard'); setDashTab('referral'); setIsMobileMenuOpen(false); }}
-                  >
-                    <Gift size={16} /> Referral Program
-                  </button>
-                  <button 
-                    className="dash-nav-item"
-                    onClick={() => { setView('dashboard'); setDashTab('profile'); setIsMobileMenuOpen(false); }}
-                  >
-                    <User size={16} /> Vault Profile
-                  </button>
-                  {user && (
-                    <div className="mobile-user-badge">
-                      <div className="user-info-text">
-                        <span className="user-email-text">{user.email}</span>
-                        <span className="kyc-badge">{user.email === 'sandeepkumar.pikili@vrpigroup.co.in' ? 'ADMIN' : 'KYC SECURED'}</span>
-                      </div>
-                      <button type="button" className="btn-sec-signout" onClick={handleSignOut} title="Secure Sign Out">
-                        <LogOut size={16} /> Sign Out
-                      </button>
+                <button 
+                  className="dash-nav-item"
+                  onClick={() => { setView('dashboard'); setDashTab('portfolio'); setIsMobileMenuOpen(false); }}
+                >
+                  <Briefcase size={16} /> Portfolio
+                </button>
+                <button 
+                  className="dash-nav-item"
+                  onClick={() => { setView('dashboard'); setDashTab('trade'); setIsMobileMenuOpen(false); }}
+                >
+                  <ArrowRightLeft size={16} /> Trade
+                </button>
+                <button 
+                  className="dash-nav-item"
+                  onClick={() => { setView('dashboard'); setDashTab('wallet'); setIsMobileMenuOpen(false); }}
+                >
+                  <Wallet size={16} /> Wallet
+                </button>
+                <button 
+                  className="dash-nav-item"
+                  onClick={() => { setView('dashboard'); setDashTab('contest'); setIsMobileMenuOpen(false); }}
+                >
+                  <Star size={16} /> Contest Awards
+                </button>
+                <button 
+                  className="dash-nav-item active"
+                  onClick={() => { setView('about'); setIsMobileMenuOpen(false); }}
+                >
+                  <Gem size={16} /> Explore Elements
+                </button>
+                <button 
+                  className="dash-nav-item"
+                  onClick={() => { setView('dashboard'); setDashTab('referral'); setIsMobileMenuOpen(false); }}
+                >
+                  <Gift size={16} /> Referral Program
+                </button>
+                <button 
+                  className="dash-nav-item"
+                  onClick={() => { setView('dashboard'); setDashTab('profile'); setIsMobileMenuOpen(false); }}
+                >
+                  <User size={16} /> Vault Profile
+                </button>
+                {user && (
+                  <div className="mobile-user-badge">
+                    <div className="user-info-text">
+                      <span className="user-email-text">{user.email}</span>
+                      <span className="kyc-badge">{user.email === 'sandeepkumar.pikili@vrpigroup.co.in' ? 'ADMIN' : 'KYC SECURED'}</span>
                     </div>
-                  )}
-                </nav>
-              </>
+                    <button type="button" className="btn-sec-signout" onClick={handleSignOut} title="Secure Sign Out">
+                      <LogOut size={16} /> Sign Out
+                    </button>
+                  </div>
+                )}
+              </nav>
+            )}
+
+            {!user && (
+              <nav className={`nav-menu ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
+                <a href="#home" className="nav-item" onClick={(e) => { e.preventDefault(); setView('home'); setIsMobileMenuOpen(false); }}>Home</a>
+                <a href="#contest" className="nav-item" onClick={(e) => { e.preventDefault(); setView('contest-awards'); setIsMobileMenuOpen(false); }}>Contest Awards</a>
+                <a href="#about" className="nav-item active" onClick={(e) => { e.preventDefault(); setView('about'); setIsMobileMenuOpen(false); }}>Explore Elements</a>
+                <a href="#referral" className="nav-item" onClick={(e) => { e.preventDefault(); setView('referral-program'); setIsMobileMenuOpen(false); }}>Referral Program</a>
+                <a href="#support-login" className="nav-item" onClick={(e) => { e.preventDefault(); setView('auth'); setAuthRole('support'); setAuthTab('login'); setIsMobileMenuOpen(false); }}>Support Login</a>
+              </nav>
             )}
             
             {user ? (
@@ -9577,11 +9778,11 @@ function App() {
                 </button>
               </div>
             ) : (
-              <button type="button" className="btn-signin" onClick={() => setView('home')}>Back to Home</button>
+              <button type="button" className="btn-signin" onClick={() => { setView('auth'); setAuthRole('client'); }}>Sign In / Sign Up</button>
             )}
           </div>
         </header>
-        <AboutUs rates={rates} holdings={holdings} walletBalance={walletBalance} isLoggedIn={!!user} onRequireAuth={() => setView('auth')} onTradeRequest={handleAboutTradeRequest} onExplore={() => { setDashTab('trade'); setView('dashboard'); }} />
+        <AboutUs rates={rates} holdings={holdings} walletBalance={walletBalance} isLoggedIn={!!user} onRequireAuth={() => { setView('auth'); setAuthRole('client'); }} onTradeRequest={handleAboutTradeRequest} onExplore={() => { setDashTab('trade'); setView('dashboard'); }} />
         {showWithdrawModal && (
           <div className="modal-overlay">
             <div className="modal-content" style={{ maxWidth: '440px', border: '1px solid rgba(217, 175, 86, 0.2)', background: 'linear-gradient(135deg, #18092a 0%, #0d0418 100%)', boxShadow: '0 20px 40px rgba(0, 0, 0, 0.5)' }}>
@@ -9859,6 +10060,7 @@ function App() {
                 <a href="#contest" className="nav-item" onClick={(e) => { e.preventDefault(); setView('contest-awards'); setIsMobileMenuOpen(false); }}>Contest Awards</a>
                 <a href="#about" className="nav-item" onClick={(e) => { e.preventDefault(); setView('about'); setIsMobileMenuOpen(false); }}>Explore Elements</a>
                 <a href="#referral" className="nav-item active" onClick={(e) => { e.preventDefault(); setView('referral-program'); setIsMobileMenuOpen(false); }}>Referral Program</a>
+                <a href="#support-login" className="nav-item" onClick={(e) => { e.preventDefault(); setView('auth'); setAuthRole('support'); setAuthTab('login'); setIsMobileMenuOpen(false); }}>Support Login</a>
               </nav>
             )}
             
@@ -9873,14 +10075,14 @@ function App() {
                 </button>
               </div>
             ) : (
-              <button type="button" className="btn-signin" onClick={() => setView('auth')}>Sign In / Sign Up</button>
+              <button type="button" className="btn-signin" onClick={() => { setView('auth'); setAuthRole('client'); }}>Sign In / Sign Up</button>
             )}
           </div>
         </header>
         <ReferralProgramPage 
           rates={rates} 
           isLoggedIn={!!user} 
-          onRequireAuth={() => setView('auth')} 
+          onRequireAuth={() => { setView('auth'); setAuthRole('client'); }} 
           onGoToDashboard={() => {
             setDashTab('referral');
             setView('dashboard');
@@ -9975,6 +10177,7 @@ function App() {
               <a href="#contest" className="nav-item" onClick={(e) => { e.preventDefault(); setView('contest-awards'); setIsMobileMenuOpen(false); }}>Contest Awards</a>
               <a href="#about" className="nav-item" onClick={(e) => { e.preventDefault(); setView('about'); setIsMobileMenuOpen(false); }}>Explore Elements</a>
               <a href="#referral" className="nav-item" onClick={(e) => { e.preventDefault(); setView('referral-program'); setIsMobileMenuOpen(false); }}>Referral Program</a>
+              <a href="#support-login" className="nav-item" onClick={(e) => { e.preventDefault(); setView('auth'); setAuthRole('support'); setAuthTab('login'); setIsMobileMenuOpen(false); }}>Support Login</a>
             </nav>
           )}
           {user ? (
@@ -9988,7 +10191,7 @@ function App() {
               </button>
             </div>
           ) : (
-            <button type="button" className="btn-signin" onClick={() => setView('auth')}>Sign In / Sign Up</button>
+            <button type="button" className="btn-signin" onClick={() => { setView('auth'); setAuthRole('client'); }}>Sign In / Sign Up</button>
           )}
         </div>
       </header>
@@ -10006,7 +10209,7 @@ function App() {
               <p className="hero-desc">Begin your wealth accumulation journey with 100% physically backed institutional-grade metals.</p>
               <div className="hero-actions">
                 {!user ? (
-                  <button type="button" className="btn-hero-primary" onClick={() => setView('auth')}>Proceed to Sign Up</button>
+                  <button type="button" className="btn-hero-primary" onClick={() => { setView('auth'); setAuthRole('client'); setAuthTab('register'); }}>Proceed to Sign Up</button>
                 ) : (
                   <button type="button" className="btn-hero-primary" onClick={() => { setView('dashboard'); setDashTab('portfolio'); }}>Go to Portfolio</button>
                 )}
@@ -10049,8 +10252,8 @@ function App() {
                     ))}
                   </div>
                   <div className="form-actions">
-                    <button type="button" className="btn-submit-buy" onClick={() => setView('auth')}>{activeAction === 'buy' ? 'Buy' : 'Sell'}</button>
-                    <button type="button" className="btn-submit-sip" onClick={() => setView('auth')}>Start SIP</button>
+                    <button type="button" className="btn-submit-buy" onClick={() => { setView('auth'); setAuthRole('client'); }}>{activeAction === 'buy' ? 'Buy' : 'Sell'}</button>
+                    <button type="button" className="btn-submit-sip" onClick={() => { setView('auth'); setAuthRole('client'); }}>Start SIP</button>
                   </div>
                 </div>
               </div>
@@ -10218,8 +10421,16 @@ function App() {
           <div style={chatPanelStyle}>
             <div style={chatHeaderStyle}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={chatAvatarStyle}>IH</div>
-                <div><div style={{ fontWeight: 700, fontSize: '14px' }}>Investhour Advisor</div></div>
+                <div style={chatAvatarStyle}>{assignedAgentName ? assignedAgentName.slice(0, 2).toUpperCase() : 'IH'}</div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '14px' }}>
+                    {assignedAgentName ? `${assignedAgentName} (Advisor)` : 'Investhour Advisor'}
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span style={chatOnlineDotStyle}></span> 
+                    {assignedAgentName ? 'Assigned to your chat' : 'Online Help Desk'}
+                  </div>
+                </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 {user && !user.isExecutive && (
@@ -10248,6 +10459,26 @@ function App() {
               </div>
             </div>
             <div style={chatBodyStyle}>
+              {assignedAgentName && (
+                <div style={{ 
+                  background: 'rgba(168, 85, 247, 0.12)', 
+                  border: '1px solid rgba(168, 85, 247, 0.25)', 
+                  color: '#d8b4fe', 
+                  padding: '8px 12px', 
+                  borderRadius: '8px', 
+                  fontSize: '11px', 
+                  fontWeight: 'bold',
+                  textAlign: 'center', 
+                  marginBottom: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px'
+                }}>
+                  <Shield size={12} style={{ color: '#c084fc' }} />
+                  <span>Assigned to Support Executive: <strong>{assignedAgentName}</strong></span>
+                </div>
+              )}
               {chatHistory.map((msg, idx) => (
                 <div key={idx} style={{ display: 'flex', justifyContent: msg.sender === 'user' ? 'flex-end' : 'flex-start', marginBottom: '12px' }}>
                   <div style={{ backgroundColor: msg.sender === 'user' ? '#a855f7' : '#270f44', color: '#fff', padding: '10px 14px', borderRadius: msg.sender === 'user' ? '14px 14px 2px 14px' : '14px 14px 14px 2px', maxWidth: '80%', fontSize: '13px', lineHeight: 1.4, boxShadow: '0 2px 6px rgba(0,0,0,0.1)' }}>
