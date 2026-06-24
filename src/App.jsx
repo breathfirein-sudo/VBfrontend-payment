@@ -2048,7 +2048,7 @@ function App() {
   // --- Super Admin & Client Shared Sync Handlers ---
   // Whenever the active logged-in standard customer state changes, sync back to clients database!
   useEffect(() => {
-    if (user && user.email !== 'sandeepkumar.pikili@vrpigroup.co.in') {
+    if (user && !user.isExecutive && user.email !== 'sandeepkumar.pikili@vrpigroup.co.in') {
       setClients(prev => {
         const next = prev.map(c => {
           if (c.email.toLowerCase() === user.email.toLowerCase()) {
@@ -2070,7 +2070,7 @@ function App() {
 
   // Load client stats from clients database upon successful login
   useEffect(() => {
-    if (user && user.email !== 'sandeepkumar.pikili@vrpigroup.co.in') {
+    if (user && !user.isExecutive && user.email !== 'sandeepkumar.pikili@vrpigroup.co.in') {
       const match = clients.find(c => c.email.toLowerCase() === user.email.toLowerCase());
       if (match) {
         // Load non-balance data from localStorage instantly for speed
