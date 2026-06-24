@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import socket from './services/socketClient';
 import {
   ChevronDown,
   ArrowRightLeft,
@@ -1452,9 +1453,38 @@ function App() {
     }
   };
 
+  const handleAcceptChat = async (email) => {
+    if (!email) return;
+    try {
+      const token = getExecToken();
+      const res = await fetch(`${VITE_BACKEND_URL}/api/support/chats/accept`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` 
+        },
+        body: JSON.stringify({ userEmail: email })
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchActiveChats();
+      } else {
+        alert(data.error || "Failed to accept chat");
+      }
+    } catch (err) {
+      alert("Network error: " + err.message);
+    }
+  };
+
   const handleSendExecReply = async (e) => {
     e.preventDefault();
     if (!newMessageText.trim() || !selectedChatEmail) return;
+
+    const selectedChatData = activeChats.find(c => c.userEmail === selectedChatEmail);
+    if (selectedChatData && selectedChatData.sessionStatus === 'Pending') {
+      alert("Please accept the chat first before replying.");
+      return;
+    }
 
     try {
       const token = getExecToken();
@@ -1651,8 +1681,10 @@ function App() {
       fetchManualDepositsList();
       fetchPerformanceReport();
 
-      // Poll chats & call requests every 5 seconds for responsive updates
-      const interval = setInterval(() => {
+      // Connect socket for real-time updates
+      socket.connect();
+
+      const handleUpdate = () => {
         fetchActiveChats();
         fetchCallRequests();
         fetchPendingDeposits();
@@ -1661,9 +1693,24 @@ function App() {
         if (selectedChatEmail) {
           fetchChatMessages(selectedChatEmail);
         }
-      }, 5000);
+      };
 
-      return () => clearInterval(interval);
+      socket.on('chat_assigned', handleUpdate);
+      socket.on('chat_accepted', handleUpdate);
+      socket.on('chat_reassigned', handleUpdate);
+      socket.on('call_requested', handleUpdate);
+      socket.on('deposit_requested', handleUpdate);
+      socket.on('deposit_action', handleUpdate);
+
+      return () => {
+        socket.off('chat_assigned', handleUpdate);
+        socket.off('chat_accepted', handleUpdate);
+        socket.off('chat_reassigned', handleUpdate);
+        socket.off('call_requested', handleUpdate);
+        socket.off('deposit_requested', handleUpdate);
+        socket.off('deposit_action', handleUpdate);
+        socket.disconnect();
+      };
     }
   }, [view, user, depositFilterStatus, depositSearch, depositPage, depositLimit, selectedChatEmail, execTab]);
 
@@ -6957,7 +7004,7 @@ function App() {
                                         {chat.lastText}
                                       </div>
                                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <span style={{ fontSize: '9px', fontWeight: 700, color: '#10b981', background: '#ecfdf5', padding: '1px 6px', borderRadius: '10px' }}>Active</span>
+                                        <span style={{ fontSize: '9px', fontWeight: 700, color: chat.sessionStatus === 'Pending' ? '#d97706' : '#10b981', background: chat.sessionStatus === 'Pending' ? '#fef3c7' : '#ecfdf5', padding: '1px 6px', borderRadius: '10px' }}>{chat.sessionStatus}</span>
                                         <span style={{ fontSize: '9px', color: '#9ca3af' }}>{chat.messageCount} msg</span>
                                       </div>
                                     </div>
@@ -6986,7 +7033,9 @@ function App() {
                                 <div>
                                   <div style={{ fontSize: '15px', fontWeight: 800, color: '#111827', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     {selectedChatEmail}
-                                    <span style={{ fontSize: '10px', fontWeight: 700, color: '#10b981', background: '#ecfdf5', padding: '2px 8px', borderRadius: '10px' }}>Active</span>
+                                    <span style={{ fontSize: '10px', fontWeight: 700, color: activeChats.find(c => c.userEmail === selectedChatEmail)?.sessionStatus === 'Pending' ? '#d97706' : '#10b981', background: activeChats.find(c => c.userEmail === selectedChatEmail)?.sessionStatus === 'Pending' ? '#fef3c7' : '#ecfdf5', padding: '2px 8px', borderRadius: '10px' }}>
+                                      {activeChats.find(c => c.userEmail === selectedChatEmail)?.sessionStatus || 'Active'}
+                                    </span>
                                   </div>
                                   <div style={{ fontSize: '12px', color: '#6b7280', fontWeight: 500, marginTop: '2px' }}>Client Conversation</div>
                                 </div>
@@ -7101,7 +7150,9 @@ function App() {
                               </div>
                               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                 <span style={{ color: '#6b7280', fontWeight: 500 }}>Status</span>
-                                <span style={{ color: '#10b981', fontWeight: 700 }}>Active</span>
+                                <span style={{ color: activeChats.find(c => c.userEmail === selectedChatEmail)?.sessionStatus === 'Pending' ? '#d97706' : '#10b981', fontWeight: 700 }}>
+                                  {activeChats.find(c => c.userEmail === selectedChatEmail)?.sessionStatus || 'Active'}
+                                </span>
                               </div>
                               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                 <span style={{ color: '#6b7280', fontWeight: 500 }}>Messages</span>
@@ -7117,6 +7168,14 @@ function App() {
                         <div style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid #f0f0f5', boxShadow: '0 2px 10px rgba(0,0,0,0.04)', padding: '24px' }}>
                           <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#111827', margin: '0 0 20px 0' }}>Quick Actions</h3>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            {activeChats.find(c => c.userEmail === selectedChatEmail)?.sessionStatus === 'Pending' && (
+                              <button 
+                                onClick={() => handleAcceptChat(selectedChatEmail)} 
+                                style={{ width: '100%', background: '#7c3aed', border: 'none', color: '#ffffff', padding: '10px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer' }}
+                              >
+                                <Check size={14} /> Accept Chat
+                              </button>
+                            )}
                             <button 
                               disabled={!selectedChatEmail} 
                               onClick={() => {
