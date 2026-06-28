@@ -1350,6 +1350,47 @@ function App() {
   });
   const [firstTimeSaving, setFirstTimeSaving] = useState(false);
 
+  const [supportRequestPrompt, setSupportRequestPrompt] = useState(null);
+  const [promptTimeLeft, setPromptTimeLeft] = useState(30);
+
+  const handleAcceptSupportPrompt = async () => {
+    if (!supportRequestPrompt || !execProfile) return;
+    const { type, requestId, userEmail } = supportRequestPrompt;
+    socket.emit('accept_support_request', { type, requestId, userEmail, execId: execProfile.id });
+    const promptData = { ...supportRequestPrompt };
+    setSupportRequestPrompt(null);
+
+    if (type === 'chat') {
+      await handleAcceptChat(userEmail);
+      setSelectedChatEmail(userEmail);
+      setExecTab('chats');
+    } else if (type === 'call') {
+      await handleUpdateCallStatus(requestId, 'Connected');
+      setExecTab('callbacks');
+    }
+  };
+
+  const handleDeclineSupportPrompt = () => {
+    if (!supportRequestPrompt || !execProfile) return;
+    const { type, requestId, userEmail } = supportRequestPrompt;
+    socket.emit('decline_support_request', { type, requestId, userEmail, execId: execProfile.id });
+    setSupportRequestPrompt(null);
+  };
+
+  useEffect(() => {
+    if (!supportRequestPrompt) return;
+    const calcTime = () => {
+      const rem = Math.max(0, Math.ceil((supportRequestPrompt.expiresAt - Date.now()) / 1000));
+      setPromptTimeLeft(rem);
+      if (rem <= 0) {
+        handleDeclineSupportPrompt();
+      }
+    };
+    calcTime();
+    const interval = setInterval(calcTime, 1000);
+    return () => clearInterval(interval);
+  }, [supportRequestPrompt]);
+
   useEffect(() => {
     if (execProfile) {
       setSettingsName(execProfile.name || '');
@@ -1393,6 +1434,7 @@ function App() {
       const data = await res.json();
       if (data.success) {
         setExecProfile(prev => ({ ...prev, attendance: data.attendance }));
+        socket.emit('exec_clocked_in');
         alert("⏰ Clocked in successfully!");
       } else {
         alert(data.error || "Failed to clock in");
@@ -1695,12 +1737,27 @@ function App() {
         }
       };
 
+      const handleIncomingRequest = (payload) => {
+        if (payload && execProfile && payload.execId === execProfile.id) {
+          setSupportRequestPrompt(payload);
+          setPromptTimeLeft(Math.max(0, Math.ceil((payload.expiresAt - Date.now()) / 1000)));
+        }
+      };
+
+      const handleCancelRequest = (payload) => {
+        if (payload && execProfile && payload.execId === execProfile.id) {
+          setSupportRequestPrompt(null);
+        }
+      };
+
       socket.on('chat_assigned', handleUpdate);
       socket.on('chat_accepted', handleUpdate);
       socket.on('chat_reassigned', handleUpdate);
       socket.on('call_requested', handleUpdate);
       socket.on('deposit_requested', handleUpdate);
       socket.on('deposit_action', handleUpdate);
+      socket.on('incoming_support_request', handleIncomingRequest);
+      socket.on('support_request_cancelled', handleCancelRequest);
 
       return () => {
         socket.off('chat_assigned', handleUpdate);
@@ -1709,6 +1766,8 @@ function App() {
         socket.off('call_requested', handleUpdate);
         socket.off('deposit_requested', handleUpdate);
         socket.off('deposit_action', handleUpdate);
+        socket.off('incoming_support_request', handleIncomingRequest);
+        socket.off('support_request_cancelled', handleCancelRequest);
         socket.disconnect();
       };
     }
@@ -5332,6 +5391,80 @@ function App() {
 
     return (
       <div id="root" className="dashboard-page-view admin-dashboard animate-fade-in" style={{ background: themeBg, color: themeText, minHeight: '100vh', display: 'flex', flexDirection: 'column', fontFamily: "'Inter', sans-serif" }}>
+        {/* REAL-TIME SUPPORT REQUEST POPUP MODAL */}
+        {supportRequestPrompt && (
+          <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(10, 5, 20, 0.85)', backdropFilter: 'blur(8px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 999999, animation: 'fade-in 0.2s ease-out'
+          }}>
+            <div style={{
+              background: '#120524', border: '2px solid #10b981',
+              borderRadius: '20px', padding: '32px', maxWidth: '480px', width: '90%',
+              display: 'flex', flexDirection: 'column', gap: '20px',
+              boxShadow: '0 20px 50px rgba(16, 185, 129, 0.3)', textAlign: 'center'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}>
+                <span style={{ fontSize: '28px' }}>{supportRequestPrompt.type === 'chat' ? '💬' : '📞'}</span>
+                <span style={{
+                  background: supportRequestPrompt.type === 'chat' ? 'rgba(124, 58, 237, 0.2)' : 'rgba(16, 185, 129, 0.2)',
+                  color: supportRequestPrompt.type === 'chat' ? '#a78bfa' : '#10b981',
+                  padding: '6px 14px', borderRadius: '20px', fontWeight: 800, fontSize: '13px', textTransform: 'uppercase'
+                }}>
+                  {supportRequestPrompt.type === 'chat' ? 'Incoming Chat Request' : 'Incoming Callback Request'}
+                </span>
+              </div>
+
+              <div>
+                <h2 style={{ margin: '0 0 6px', fontSize: '22px', fontWeight: 800, color: '#ffffff' }}>{supportRequestPrompt.userName}</h2>
+                <p style={{ margin: 0, fontSize: '14px', color: '#9c93a8' }}>{supportRequestPrompt.userEmail}</p>
+                {supportRequestPrompt.phone && (
+                  <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#10b981', fontWeight: 600 }}>📞 {supportRequestPrompt.phone}</p>
+                )}
+              </div>
+
+              {/* Countdown Progress Bar */}
+              <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '16px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: 700, marginBottom: '8px', color: promptTimeLeft <= 10 ? '#f43f5e' : '#ffffff' }}>
+                  <span>Action Required</span>
+                  <span>⏳ {promptTimeLeft}s remaining</span>
+                </div>
+                <div style={{ width: '100%', height: '8px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', overflow: 'hidden' }}>
+                  <div style={{
+                    width: `${(promptTimeLeft / 30) * 100}%`, height: '100%',
+                    background: promptTimeLeft <= 10 ? '#f43f5e' : 'linear-gradient(90deg, #10b981, #3b82f6)',
+                    transition: 'width 1s linear'
+                  }} />
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginTop: '8px' }}>
+                <button
+                  onClick={handleDeclineSupportPrompt}
+                  style={{
+                    background: 'transparent', color: '#f43f5e', border: '1.5px solid #f43f5e',
+                    padding: '14px', borderRadius: '12px', fontWeight: 700, fontSize: '15px',
+                    cursor: 'pointer', transition: 'all 0.2s'
+                  }}
+                >
+                  ✖ Decline
+                </button>
+                <button
+                  onClick={handleAcceptSupportPrompt}
+                  style={{
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#ffffff',
+                    border: 'none', padding: '14px', borderRadius: '12px', fontWeight: 800, fontSize: '15px',
+                    cursor: 'pointer', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.4)', transition: 'all 0.2s'
+                  }}
+                >
+                  ✓ Accept Request
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         {execProfile?.settings?.isTempPassword && (
           <div style={{
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
