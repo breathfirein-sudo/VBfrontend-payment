@@ -94,6 +94,19 @@ const INITIAL_RATES = {
 
 const VITE_BACKEND_URL = import.meta.env.VITE_BACKEND_URL || (typeof window !== 'undefined' && (window.location.hostname.includes('localhost') || window.location.hostname === '127.0.0.1') ? 'http://localhost:5000' : 'https://hour-60kr.onrender.com');
 
+const getMediaUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) return url;
+  const baseUrl = VITE_BACKEND_URL.endsWith('/') ? VITE_BACKEND_URL.slice(0, -1) : VITE_BACKEND_URL;
+  const path = url.startsWith('/') ? url : `/${url}`;
+  return `${baseUrl}${path}`;
+};
+
+const checkIsImage = (url) => {
+  if (!url) return false;
+  return /\.(jpg|jpeg|png|gif|webp|svg|bmp|jfif|heic|heif)(\?.*)?$/i.test(url) || url.includes('/uploads/');
+};
+
 // Timeout-aware fetch wrapper (default 90s for cold starts)
 const fetchWithTimeout = (url, options = {}, timeoutMs = 90000) => {
   const controller = new AbortController();
@@ -200,6 +213,7 @@ function App() {
 
   // --- Auth & Profile States ---
   const [user, setUser] = useState(null);
+  const [previewImageUrl, setPreviewImageUrl] = useState(null);
   
   // --- KYC Upload States ---
   const [kycDocType, setKycDocType] = useState('Aadhaar'); // 'Aadhaar', 'PAN', 'Passport'
@@ -1737,6 +1751,13 @@ function App() {
         }
       };
 
+      const handleNewMsg = (msg) => {
+        fetchActiveChats();
+        if (msg && selectedChatEmail && msg.userEmail && msg.userEmail.toLowerCase() === selectedChatEmail.toLowerCase()) {
+          fetchChatMessages(selectedChatEmail);
+        }
+      };
+
       const handleIncomingRequest = (payload) => {
         if (payload && execProfile && payload.execId === execProfile.id) {
           setSupportRequestPrompt(payload);
@@ -1756,16 +1777,26 @@ function App() {
       socket.on('call_requested', handleUpdate);
       socket.on('deposit_requested', handleUpdate);
       socket.on('deposit_action', handleUpdate);
+      socket.on('new_support_message', handleNewMsg);
       socket.on('incoming_support_request', handleIncomingRequest);
       socket.on('support_request_cancelled', handleCancelRequest);
 
+      const pollInterval = setInterval(() => {
+        fetchActiveChats();
+        if (selectedChatEmail) {
+          fetchChatMessages(selectedChatEmail);
+        }
+      }, 5000);
+
       return () => {
+        clearInterval(pollInterval);
         socket.off('chat_assigned', handleUpdate);
         socket.off('chat_accepted', handleUpdate);
         socket.off('chat_reassigned', handleUpdate);
         socket.off('call_requested', handleUpdate);
         socket.off('deposit_requested', handleUpdate);
         socket.off('deposit_action', handleUpdate);
+        socket.off('new_support_message', handleNewMsg);
         socket.off('incoming_support_request', handleIncomingRequest);
         socket.off('support_request_cancelled', handleCancelRequest);
         socket.disconnect();
@@ -6006,11 +6037,30 @@ function App() {
                         </div>
                         <div style={{ fontSize: '11px', color: '#374151' }}>UTR: <span style={{ color: '#8b5cf6', fontFamily: 'monospace', fontWeight: 700 }}>{dep.utrNumber}</span></div>
                         <div style={{ fontSize: '11px', color: '#6b7280' }}>User: {dep.user?.email}</div>
-                        {dep.screenshotUrl && (
-                          <div style={{ marginTop: '4px' }}>
-                            <a href={`${VITE_BACKEND_URL}${dep.screenshotUrl}`} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', fontSize: '11px', textDecoration: 'underline', fontWeight: 600 }}>View Screenshot</a>
-                          </div>
-                        )}
+                        {dep.screenshotUrl && (() => {
+                          const imgUrl = getMediaUrl(dep.screenshotUrl);
+                          return (
+                            <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(59,130,246,0.05)', padding: '6px 10px', borderRadius: '6px', border: '1px solid rgba(59,130,246,0.1)' }}>
+                              <img 
+                                src={imgUrl} 
+                                alt="Payment Proof" 
+                                style={{ width: '44px', height: '44px', borderRadius: '4px', objectFit: 'cover', cursor: 'pointer', border: '1px solid #d1d5db' }} 
+                                onClick={() => setPreviewImageUrl(imgUrl)}
+                                title="Click to zoom screenshot"
+                              />
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                <span style={{ fontSize: '11px', fontWeight: 700, color: '#1d4ed8' }}>Payment Receipt</span>
+                                <button 
+                                  type="button"
+                                  onClick={() => setPreviewImageUrl(imgUrl)}
+                                  style={{ background: 'none', border: 'none', padding: 0, color: '#3b82f6', fontSize: '10px', textDecoration: 'underline', cursor: 'pointer', textAlign: 'left', fontWeight: 600 }}
+                                >
+                                  Click to enlarge 🔍
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })()}
                         <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
                           <button onClick={() => handleDepositAction(dep.id, 'approve')} style={{ flex: 1, background: '#10b981', border: 'none', color: '#fff', fontSize: '11px', fontWeight: 700, padding: '6px', borderRadius: '4px', cursor: 'pointer' }}>Approve</button>
                           <button onClick={() => handleDepositAction(dep.id, 'reject')} style={{ flex: 1, background: '#f43f5e', border: 'none', color: '#fff', fontSize: '11px', fontWeight: 700, padding: '6px', borderRadius: '4px', cursor: 'pointer' }}>Reject</button>
@@ -6854,11 +6904,28 @@ function App() {
                                       <td style={{ padding: '16px 0', borderBottom: '1px solid #f9fafb' }}><span style={{ background: statusBg, color: statusColor, padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 600 }}>{dep.status}</span></td>
                                       <td style={{ padding: '16px 0', textAlign: 'center', borderBottom: '1px solid #f9fafb' }}>
                                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>
-                                          {dep.screenshotUrl && (
-                                            <a href={`${VITE_BACKEND_URL}${dep.screenshotUrl}`} target="_blank" rel="noopener noreferrer" style={{ background: 'transparent', border: '1px solid #e5e7eb', borderRadius: '6px', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4f46e5', textDecoration: 'none' }} title="View Screenshot">
-                                              <Eye size={14} />
-                                            </a>
-                                          )}
+                                          {dep.screenshotUrl && (() => {
+                                             const imgUrl = getMediaUrl(dep.screenshotUrl);
+                                             return (
+                                               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                 <img 
+                                                   src={imgUrl} 
+                                                   alt="Receipt" 
+                                                   style={{ width: '32px', height: '32px', borderRadius: '4px', objectFit: 'cover', cursor: 'pointer', border: '1px solid #d1d5db' }} 
+                                                   onClick={() => setPreviewImageUrl(imgUrl)}
+                                                   title="Click to zoom screenshot"
+                                                 />
+                                                 <button 
+                                                   type="button"
+                                                   onClick={() => setPreviewImageUrl(imgUrl)}
+                                                   style={{ background: 'transparent', border: '1px solid #e5e7eb', borderRadius: '6px', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4f46e5', cursor: 'pointer' }} 
+                                                   title="View Full Screenshot"
+                                                 >
+                                                   <Eye size={14} />
+                                                 </button>
+                                               </div>
+                                             );
+                                           })()}
                                           {dep.status === 'Pending' && (
                                             <>
                                               <button onClick={() => handleDepositAction(dep.id, 'approve')} style={{ background: '#10b981', border: 'none', color: '#fff', fontSize: '11px', fontWeight: 700, padding: '6px 10px', borderRadius: '4px', cursor: 'pointer' }}>Approve</button>
@@ -7188,16 +7255,17 @@ function App() {
                                       <div style={{ background: isAgent ? '#f3e8ff' : '#f3f4f6', padding: '14px 16px', borderRadius: '12px', borderTopLeftRadius: isAgent ? '12px' : '2px', borderTopRightRadius: isAgent ? '2px' : '12px', maxWidth: '75%' }}>
                                         {msg.text && <div style={{ fontSize: '13px', color: isAgent ? '#4c1d95' : '#1f2937', lineHeight: 1.5 }}>{msg.text}</div>}
                                         {msg.mediaUrl && (() => {
-                                          const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(msg.mediaUrl);
-                                          const fullUrl = msg.mediaUrl.startsWith('http') ? msg.mediaUrl : `${VITE_BACKEND_URL}${msg.mediaUrl}`;
+                                          const isImg = checkIsImage(msg.mediaUrl);
+                                          const fullUrl = getMediaUrl(msg.mediaUrl);
                                           if (isImg) {
                                             return (
                                               <div style={{ marginTop: '8px' }}>
                                                 <img 
                                                   src={fullUrl} 
                                                   alt="Attachment" 
-                                                  style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px', cursor: 'pointer', border: '1px solid rgba(0,0,0,0.05)' }} 
-                                                  onClick={() => window.open(fullUrl, '_blank')}
+                                                  style={{ maxWidth: '100%', maxHeight: '220px', borderRadius: '8px', cursor: 'pointer', border: '1px solid rgba(0,0,0,0.08)', objectFit: 'cover' }} 
+                                                  onClick={() => setPreviewImageUrl(fullUrl)}
+                                                  title="Click to zoom image"
                                                 />
                                               </div>
                                             );
@@ -10685,7 +10753,8 @@ function App() {
                               src={fullUrl} 
                               alt="Attachment" 
                               style={{ maxWidth: '100%', maxHeight: '180px', borderRadius: '6px', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.1)' }} 
-                              onClick={() => window.open(fullUrl, '_blank')}
+                              onClick={() => setPreviewImageUrl(fullUrl)}
+                              title="Click to zoom image"
                             />
                           </div>
                         );
@@ -10717,6 +10786,58 @@ function App() {
               <input type="text" placeholder="Type your question..." value={chatMessage} onChange={(e) => setChatMessage(e.target.value)} style={chatInputStyle} />
               <button type="submit" style={chatSendBtnStyle}><Send size={16} /></button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* GLOBAL IMAGE PREVIEW MODAL */}
+      {previewImageUrl && (
+        <div 
+          style={{
+            position: 'fixed', inset: 0, zIndex: 9999999,
+            backgroundColor: 'rgba(0, 0, 0, 0.85)', backdropFilter: 'blur(8px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '24px', animation: 'fadeIn 0.2s ease-out'
+          }}
+          onClick={() => setPreviewImageUrl(null)}
+        >
+          <div 
+            style={{
+              position: 'relative', maxWidth: '90vw', maxHeight: '90vh',
+              background: '#120524', border: '1px solid rgba(255,255,255,0.15)',
+              borderRadius: '16px', overflow: 'hidden', display: 'flex', flexDirection: 'column',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ padding: '14px 20px', background: '#1a0b36', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '14px', fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                📷 Image Viewer
+              </span>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                <a 
+                  href={previewImageUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, textDecoration: 'none' }}
+                >
+                  Open Original ↗
+                </a>
+                <button 
+                  onClick={() => setPreviewImageUrl(null)}
+                  style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.4)', width: '28px', height: '28px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+            <div style={{ padding: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'auto', background: '#0e041b' }}>
+              <img 
+                src={previewImageUrl} 
+                alt="Enlarged Preview" 
+                style={{ maxWidth: '100%', maxHeight: '75vh', objectFit: 'contain', borderRadius: '8px' }} 
+              />
+            </div>
           </div>
         </div>
       )}
