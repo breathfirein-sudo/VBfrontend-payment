@@ -67,7 +67,8 @@ import {
   Sun,
   Moon,
   Monitor,
-  Save
+  Save,
+  Bell
 } from 'lucide-react';
 import heroGoldOre from './assets/hero_gold_ore.png';
 import './App.css';
@@ -258,7 +259,7 @@ function App() {
         type: kycDocType,
         fileName: kycFile.name,
         fileSize: (kycFile.size / 1024).toFixed(1) + ' KB',
-        uploadedAt: new Date().toISOString().slice(0, 16).replace('T', ' '),
+        uploadedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
         fileData: fileData
       };
 
@@ -522,6 +523,8 @@ function App() {
   const [successfulReferralsCount, setSuccessfulReferralsCount] = useState(0);
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [hasPendingUnlockDeposit, setHasPendingUnlockDeposit] = useState(false);
+  const [hasPendingDeposit, setHasPendingDeposit] = useState(false);
+  const [hasPendingWithdrawal, setHasPendingWithdrawal] = useState(false);
   const [referralsList, setReferralsList] = useState([]);
   const [realtimeWinners, setRealtimeWinners] = useState([]);
   
@@ -588,6 +591,7 @@ function App() {
         setManualPaymentMethod('UPI');
         // Immediately show the verification pending screen
         setHasPendingUnlockDeposit(true);
+        setHasPendingDeposit(true);
         // Refresh support chat so the user can see the submission message
         fetchUserChatHistory();
       } else {
@@ -738,13 +742,16 @@ function App() {
                 <div style={{ display: manualPayTab === 'upi' ? 'flex' : 'none', flexDirection: 'column', alignItems: 'center', gap: '10px', padding: '5px 0' }}>
                     <div style={{ 
                       background: '#fff', 
-                      padding: '10px', 
+                      padding: '0', 
                       borderRadius: '16px', 
                       boxShadow: '0 8px 30px rgba(16, 185, 129, 0.15)', 
                       border: '2px solid rgba(16, 185, 129, 0.3)',
-                      display: 'inline-block' 
+                      display: 'inline-block',
+                      overflow: 'hidden',
+                      width: '160px',
+                      height: '160px'
                     }}>
-                      <img src="/deposit-qr.jpg" alt="Deposit QR Code" style={{ width: '130px', height: '130px', display: 'block', borderRadius: '8px', objectFit: 'contain' }} />
+                      <img src="/deposit-qr.jpg" alt="Deposit QR Code" style={{ width: '100%', height: '100%', display: 'block', objectFit: 'cover', transform: 'scale(1.25) translateY(-4%)' }} />
                     </div>
                     <span style={{ fontSize: '11px', color: '#9c93a8', fontWeight: 500, textAlign: 'center', maxWidth: '300px', lineHeight: '1.4' }}>
                       Scan QR code using PhonePe, Paytm, GooglePay or any UPI application.
@@ -940,71 +947,7 @@ function App() {
                   </select>
                 </div>
 
-                {/* Custom Screenshot Uploader */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '11px', color: '#9c93a8', textTransform: 'uppercase', letterSpacing: '0.8px', fontWeight: 700 }}>Payment Screenshot / Receipt</label>
-                  <div 
-                    onClick={() => document.getElementById('manual-deposit-file-input').click()}
-                    style={{
-                      border: '2px dashed rgba(255, 255, 255, 0.15)',
-                      borderRadius: '10px',
-                      padding: '16px 12px',
-                      textAlign: 'center',
-                      background: 'rgba(0,0,0,0.2)',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease-in-out',
-                    }}
-                    onMouseOver={(e) => { e.currentTarget.style.borderColor = '#10b981'; e.currentTarget.style.background = 'rgba(16, 185, 129, 0.02)'; }}
-                    onMouseOut={(e) => { e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)'; e.currentTarget.style.background = 'rgba(0,0,0,0.2)'; }}
-                  >
-                    <input 
-                      id="manual-deposit-file-input"
-                      type="file" 
-                      required 
-                      accept="image/*" 
-                      onChange={(e) => setManualScreenshot(e.target.files[0])} 
-                      style={{ display: 'none' }} 
-                    />
-                    {!manualScreenshot ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
-                        <Upload size={20} style={{ color: '#10b981' }} />
-                        <span style={{ fontSize: '12px', color: '#fff', fontWeight: 700 }}>Click to upload screenshot</span>
-                        <span style={{ fontSize: '9px', color: '#9c93a8' }}>PNG, JPG or JPEG (Max 5MB)</span>
-                      </div>
-                    ) : (
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }} onClick={(e) => e.stopPropagation()}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <img 
-                            src={URL.createObjectURL(manualScreenshot)} 
-                            alt="Preview" 
-                            style={{ width: '36px', height: '36px', borderRadius: '6px', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.1)' }} 
-                          />
-                          <div style={{ textAlign: 'left' }}>
-                            <div style={{ fontSize: '11px', color: '#fff', fontWeight: 700, maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{manualScreenshot.name}</div>
-                            <div style={{ fontSize: '9px', color: '#9c93a8' }}>{(manualScreenshot.size / (1024 * 1024)).toFixed(2)} MB</div>
-                          </div>
-                        </div>
-                        <button 
-                          type="button"
-                          onClick={() => setManualScreenshot(null)}
-                          style={{ 
-                            background: 'rgba(244, 63, 94, 0.15)', 
-                            color: '#f43f5e', 
-                            border: 'none', 
-                            padding: '6px', 
-                            borderRadius: '6px', 
-                            cursor: 'pointer', 
-                            display: 'flex', 
-                            alignItems: 'center',
-                            transition: 'all 0.2s'
-                          }}
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
+
               </div>
             </div>
 
@@ -1113,7 +1056,7 @@ function App() {
         asset: 'wallet',
         amount: val,
         weight: 0,
-        date: new Date().toISOString().slice(0, 16).replace('T', ' '),
+        date: new Date().toISOString().slice(0, 19).replace('T', ' '),
         status: 'Completed'
       }, ...prev]);
       setWithdrawAmount('');
@@ -1317,6 +1260,7 @@ function App() {
 
   // --- Support Executive Panel States & Methods ---
   const [execProfile, setExecProfile] = useState(null);
+  const [pendingRequests, setPendingRequests] = useState([]);
   const [activeChats, setActiveChats] = useState([]);
   const [selectedChatEmail, setSelectedChatEmail] = useState(null);
   const [chatMessages, setChatMessages] = useState([]);
@@ -1364,46 +1308,6 @@ function App() {
   });
   const [firstTimeSaving, setFirstTimeSaving] = useState(false);
 
-  const [supportRequestPrompt, setSupportRequestPrompt] = useState(null);
-  const [promptTimeLeft, setPromptTimeLeft] = useState(30);
-
-  const handleAcceptSupportPrompt = async () => {
-    if (!supportRequestPrompt || !execProfile) return;
-    const { type, requestId, userEmail } = supportRequestPrompt;
-    socket.emit('accept_support_request', { type, requestId, userEmail, execId: execProfile.id });
-    const promptData = { ...supportRequestPrompt };
-    setSupportRequestPrompt(null);
-
-    if (type === 'chat') {
-      await handleAcceptChat(userEmail);
-      setSelectedChatEmail(userEmail);
-      setExecTab('chats');
-    } else if (type === 'call') {
-      await handleUpdateCallStatus(requestId, 'Connected');
-      setExecTab('callbacks');
-    }
-  };
-
-  const handleDeclineSupportPrompt = () => {
-    if (!supportRequestPrompt || !execProfile) return;
-    const { type, requestId, userEmail } = supportRequestPrompt;
-    socket.emit('decline_support_request', { type, requestId, userEmail, execId: execProfile.id });
-    setSupportRequestPrompt(null);
-  };
-
-  useEffect(() => {
-    if (!supportRequestPrompt) return;
-    const calcTime = () => {
-      const rem = Math.max(0, Math.ceil((supportRequestPrompt.expiresAt - Date.now()) / 1000));
-      setPromptTimeLeft(rem);
-      if (rem <= 0) {
-        handleDeclineSupportPrompt();
-      }
-    };
-    calcTime();
-    const interval = setInterval(calcTime, 1000);
-    return () => clearInterval(interval);
-  }, [supportRequestPrompt]);
 
   useEffect(() => {
     if (execProfile) {
@@ -1450,6 +1354,7 @@ function App() {
         setExecProfile(prev => ({ ...prev, attendance: data.attendance }));
         socket.emit('exec_clocked_in');
         alert("⏰ Clocked in successfully!");
+        fetchPendingRequests();
       } else {
         alert(data.error || "Failed to clock in");
       }
@@ -1509,38 +1414,13 @@ function App() {
     }
   };
 
-  const handleAcceptChat = async (email) => {
-    if (!email) return;
-    try {
-      const token = getExecToken();
-      const res = await fetch(`${VITE_BACKEND_URL}/api/support/chats/accept`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` 
-        },
-        body: JSON.stringify({ userEmail: email })
-      });
-      const data = await res.json();
-      if (data.success) {
-        fetchActiveChats();
-      } else {
-        alert(data.error || "Failed to accept chat");
-      }
-    } catch (err) {
-      alert("Network error: " + err.message);
-    }
-  };
+
 
   const handleSendExecReply = async (e) => {
     e.preventDefault();
     if (!newMessageText.trim() || !selectedChatEmail) return;
 
-    const selectedChatData = activeChats.find(c => c.userEmail === selectedChatEmail);
-    if (selectedChatData && selectedChatData.sessionStatus === 'Pending') {
-      alert("Please accept the chat first before replying.");
-      return;
-    }
+
 
     try {
       const token = getExecToken();
@@ -1582,6 +1462,56 @@ function App() {
       }
     } catch (err) {
       alert("Network error: " + err.message);
+    }
+  };
+
+  const fetchPendingRequests = async () => {
+    try {
+      const token = getExecToken();
+      if (!token) return;
+      const res = await fetch(`${VITE_BACKEND_URL}/api/support/pending-requests`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPendingRequests(data.pendingRequests);
+      }
+    } catch (err) {
+      console.error("Error fetching pending requests:", err);
+    }
+  };
+
+  const handleClaimRequest = async (type, requestId, userEmail) => {
+    try {
+      const token = getExecToken();
+      if (!token) return;
+      const res = await fetch(`${VITE_BACKEND_URL}/api/support/pending-requests/claim`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` 
+        },
+        body: JSON.stringify({ type, requestId, userEmail })
+      });
+      const data = await res.json();
+      if (data.success) {
+        // Redirection handled by socket event
+        if (type === 'chat') {
+          setExecTab('chats');
+          setSelectedChatEmail(userEmail);
+        } else if (type === 'deposit') {
+          setExecTab('deposits');
+          fetchManualDepositsList();
+          fetchPendingDeposits();
+        } else {
+          setExecTab('callbacks');
+        }
+      } else {
+        alert(data.error || "Failed to claim request.");
+        fetchPendingRequests();
+      }
+    } catch (err) {
+      alert("Error claiming request: " + err.message);
     }
   };
 
@@ -1685,6 +1615,13 @@ function App() {
   };
 
   const handleDepositAction = async (id, action) => {
+    let reason = '';
+    if (action === 'reject') {
+      const input = window.prompt("Please enter the reason for rejection:");
+      if (input === null) return; // User cancelled
+      reason = input.trim();
+    }
+    
     try {
       const token = getExecToken();
       const res = await fetch(`${VITE_BACKEND_URL}/api/deposits/${id}/action`, {
@@ -1693,7 +1630,7 @@ function App() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ action })
+        body: JSON.stringify({ action, reason })
       });
       const data = await res.json();
       if (data.success) {
@@ -1709,6 +1646,8 @@ function App() {
   };
 
   const handleUpdateCallStatus = async (id, status) => {
+    // Optimistic update
+    setCallRequests(prev => prev.map(req => req.id === id ? { ...req, status } : req));
     try {
       const token = getExecToken();
       const res = await fetch(`${VITE_BACKEND_URL}/api/support/call-requests/${id}/status`, {
@@ -1722,11 +1661,47 @@ function App() {
       const data = await res.json();
       if (data.success) {
         fetchCallRequests();
+      } else {
+        alert(data.error || "Failed to update call status");
+        fetchCallRequests(); // Revert optimistic update
       }
     } catch (err) {
       alert("Error updating call request: " + err.message);
+      fetchCallRequests(); // Revert optimistic update
     }
   };
+
+  const socketCallbacksRef = useRef({});
+
+  useEffect(() => {
+    socketCallbacksRef.current = {
+      handleUpdate: () => {
+        fetchActiveChats();
+        fetchCallRequests();
+        fetchPendingDeposits();
+        fetchManualDepositsList();
+        fetchPerformanceReport();
+        fetchPendingRequests();
+        if (selectedChatEmail) fetchChatMessages(selectedChatEmail);
+      },
+      handleNewMsg: (msg) => {
+        fetchActiveChats();
+        fetchPendingRequests();
+        if (msg && selectedChatEmail && msg.userEmail && msg.userEmail.toLowerCase() === selectedChatEmail.toLowerCase()) {
+          fetchChatMessages(selectedChatEmail);
+        }
+      },
+      handleNewPending: (payload) => {
+        fetchPendingRequests();
+      },
+      handleRequestClaimed: (payload) => {
+        fetchPendingRequests();
+      },
+      pollCurrentChat: () => {
+        if (selectedChatEmail) fetchChatMessages(selectedChatEmail);
+      }
+    };
+  });
 
   useEffect(() => {
     if (view === 'support-dashboard' && user && user.isExecutive) {
@@ -1736,73 +1711,47 @@ function App() {
       fetchPendingDeposits();
       fetchManualDepositsList();
       fetchPerformanceReport();
+      fetchPendingRequests();
 
       // Connect socket for real-time updates
       socket.connect();
 
-      const handleUpdate = () => {
-        fetchActiveChats();
-        fetchCallRequests();
-        fetchPendingDeposits();
-        fetchManualDepositsList();
-        fetchPerformanceReport();
-        if (selectedChatEmail) {
-          fetchChatMessages(selectedChatEmail);
-        }
-      };
+      const onUpdate = () => socketCallbacksRef.current.handleUpdate?.();
+      const onNewMsg = (msg) => socketCallbacksRef.current.handleNewMsg?.(msg);
+      const onNewPending = (payload) => socketCallbacksRef.current.handleNewPending?.(payload);
+      const onRequestClaimed = (payload) => socketCallbacksRef.current.handleRequestClaimed?.(payload);
 
-      const handleNewMsg = (msg) => {
-        fetchActiveChats();
-        if (msg && selectedChatEmail && msg.userEmail && msg.userEmail.toLowerCase() === selectedChatEmail.toLowerCase()) {
-          fetchChatMessages(selectedChatEmail);
-        }
-      };
-
-      const handleIncomingRequest = (payload) => {
-        if (payload && execProfile && payload.execId === execProfile.id) {
-          setSupportRequestPrompt(payload);
-          setPromptTimeLeft(Math.max(0, Math.ceil((payload.expiresAt - Date.now()) / 1000)));
-        }
-      };
-
-      const handleCancelRequest = (payload) => {
-        if (payload && execProfile && payload.execId === execProfile.id) {
-          setSupportRequestPrompt(null);
-        }
-      };
-
-      socket.on('chat_assigned', handleUpdate);
-      socket.on('chat_accepted', handleUpdate);
-      socket.on('chat_reassigned', handleUpdate);
-      socket.on('call_requested', handleUpdate);
-      socket.on('deposit_requested', handleUpdate);
-      socket.on('deposit_action', handleUpdate);
-      socket.on('new_support_message', handleNewMsg);
-      socket.on('incoming_support_request', handleIncomingRequest);
-      socket.on('support_request_cancelled', handleCancelRequest);
+      socket.on('chat_assigned', onUpdate);
+      socket.on('chat_accepted', onUpdate);
+      socket.on('support_request_resolved', onUpdate);
+      socket.on('chat_reassigned', onUpdate);
+      socket.on('call_requested', onUpdate);
+      socket.on('deposit_requested', onUpdate);
+      socket.on('deposit_action', onUpdate);
+      socket.on('new_support_message', onNewMsg);
+      socket.on('new_pending_request', onNewPending);
+      socket.on('request_claimed', onRequestClaimed);
 
       const pollInterval = setInterval(() => {
-        fetchActiveChats();
-        if (selectedChatEmail) {
-          fetchChatMessages(selectedChatEmail);
-        }
+        socketCallbacksRef.current.pollCurrentChat?.();
       }, 5000);
 
       return () => {
         clearInterval(pollInterval);
-        socket.off('chat_assigned', handleUpdate);
-        socket.off('chat_accepted', handleUpdate);
-        socket.off('chat_reassigned', handleUpdate);
-        socket.off('call_requested', handleUpdate);
-        socket.off('deposit_requested', handleUpdate);
-        socket.off('deposit_action', handleUpdate);
-        socket.off('new_support_message', handleNewMsg);
-        socket.off('incoming_support_request', handleIncomingRequest);
-        socket.off('support_request_cancelled', handleCancelRequest);
+        socket.off('chat_assigned', onUpdate);
+        socket.off('chat_accepted', onUpdate);
+        socket.off('chat_reassigned', onUpdate);
+        socket.off('call_requested', onUpdate);
+        socket.off('deposit_requested', onUpdate);
+        socket.off('deposit_action', onUpdate);
+        socket.off('new_support_message', onNewMsg);
+        socket.off('new_pending_request', onNewPending);
+        socket.off('request_claimed', onRequestClaimed);
+
         socket.disconnect();
       };
     }
-  }, [view, user, depositFilterStatus, depositSearch, depositPage, depositLimit, selectedChatEmail, execTab]);
+  }, [view, user]);
 
   // Real-time clock ticker for shift progress bar
   useEffect(() => {
@@ -2260,6 +2209,12 @@ function App() {
             if (data.hasPendingUnlockDeposit !== undefined) {
               setHasPendingUnlockDeposit(data.hasPendingUnlockDeposit);
             }
+            if (data.hasPendingDeposit !== undefined) {
+              setHasPendingDeposit(data.hasPendingDeposit);
+            }
+            if (data.hasPendingWithdrawal !== undefined) {
+              setHasPendingWithdrawal(data.hasPendingWithdrawal);
+            }
             // ALWAYS use backend balance — it's the authoritative value
             if (data.walletBalance !== undefined) {
               setWalletBalance(data.walletBalance);
@@ -2281,8 +2236,9 @@ function App() {
                       t.type?.toLowerCase() === 'refund' ? 'refund' : 'withdrawal',
                 asset: t.asset || 'wallet',
                 amount: t.amount,
+                details: t.details,
                 status: 'Completed',
-                date: new Date(t.createdAt).toISOString().slice(0, 16).replace('T', ' ')
+                date: new Date(t.createdAt).toISOString().slice(0, 19).replace('T', ' ')
               }));
               setTransactions(mappedTx);
             }
@@ -2301,8 +2257,9 @@ function App() {
                             t.type?.toLowerCase() === 'refund' ? 'refund' : 'withdrawal',
                       asset: t.asset || 'wallet',
                       amount: t.amount,
+                      details: t.details,
                       status: 'Completed',
-                      date: new Date(t.createdAt).toISOString().slice(0, 16).replace('T', ' ')
+                      date: new Date(t.createdAt).toISOString().slice(0, 19).replace('T', ' ')
                     })) : c.transactions
                   };
                 }
@@ -2503,6 +2460,12 @@ function App() {
               if (data.hasPendingUnlockDeposit !== undefined) {
                 setHasPendingUnlockDeposit(data.hasPendingUnlockDeposit);
               }
+              if (data.hasPendingDeposit !== undefined) {
+                setHasPendingDeposit(data.hasPendingDeposit);
+              }
+              if (data.hasPendingWithdrawal !== undefined) {
+                setHasPendingWithdrawal(data.hasPendingWithdrawal);
+              }
               if (data.lockedBankDetails) {
                 setLockedBankDetails(data.lockedBankDetails);
                 setAccountHolderName(data.lockedBankDetails.accountHolder || '');
@@ -2594,7 +2557,7 @@ function App() {
             asset: asset,
             amount: totalCost,
             weight: finalGrams,
-            date: new Date().toISOString().slice(0, 16).replace('T', ' '),
+            date: new Date().toISOString().slice(0, 19).replace('T', ' '),
             status: 'Completed'
           },
           ...prev
@@ -2619,7 +2582,7 @@ function App() {
             asset: asset,
             amount: finalRupees,
             weight: finalGrams,
-            date: new Date().toISOString().slice(0, 16).replace('T', ' '),
+            date: new Date().toISOString().slice(0, 19).replace('T', ' '),
             status: 'Completed'
           },
           ...prev
@@ -2907,7 +2870,7 @@ function App() {
                 asset: 'wallet',
                 amount: 10,
                 weight: 0,
-                date: new Date().toISOString().slice(0, 16).replace('T', ' '),
+                date: new Date().toISOString().slice(0, 19).replace('T', ' '),
                 status: 'Completed',
                 details: `Referral bonus for inviting ${data.user.email}`
               };
@@ -2985,7 +2948,7 @@ function App() {
   }, [isChatOpen, user]);
 
   useEffect(() => {
-    if (user && !user.isExecutive && (!isUnlocked || hasPendingUnlockDeposit)) {
+    if (user && !user.isExecutive && (!isUnlocked || hasPendingUnlockDeposit || hasPendingDeposit || hasPendingWithdrawal)) {
       const checkStatus = async () => {
         try {
           const res = await fetch(`${VITE_BACKEND_URL}/api/auth/validate`, {
@@ -3001,6 +2964,12 @@ function App() {
             if (data.hasPendingUnlockDeposit !== undefined) {
               setHasPendingUnlockDeposit(data.hasPendingUnlockDeposit);
             }
+            if (data.hasPendingDeposit !== undefined) {
+              setHasPendingDeposit(data.hasPendingDeposit);
+            }
+            if (data.hasPendingWithdrawal !== undefined) {
+              setHasPendingWithdrawal(data.hasPendingWithdrawal);
+            }
             if (data.walletBalance !== undefined) {
               setWalletBalance(data.walletBalance);
             }
@@ -3015,7 +2984,7 @@ function App() {
       const interval = setInterval(checkStatus, 5000);
       return () => clearInterval(interval);
     }
-  }, [user, isUnlocked, hasPendingUnlockDeposit]);
+  }, [user, isUnlocked, hasPendingUnlockDeposit, hasPendingDeposit, hasPendingWithdrawal]);
 
   const handleRequestCallback = async () => {
     try {
@@ -4541,7 +4510,7 @@ function App() {
                                   type: file.type,
                                   fileName: file.name,
                                   fileSize: 'Uploaded',
-                                  uploadedAt: new Date().toISOString().slice(0, 16).replace('T', ' '),
+                                  uploadedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
                                   fileData: base64Data
                                 },
                                 kycRejectionReason: null
@@ -4728,7 +4697,7 @@ function App() {
                                 asset: 'wallet',
                                 amount: val,
                                 weight: 0,
-                                date: new Date().toISOString().slice(0, 16).replace('T', ' '),
+                                date: new Date().toISOString().slice(0, 19).replace('T', ' '),
                                 status: 'Completed'
                               };
                               return {
@@ -4771,7 +4740,7 @@ function App() {
                                 asset: 'wallet',
                                 amount: val,
                                 weight: 0,
-                                date: new Date().toISOString().slice(0, 16).replace('T', ' '),
+                                date: new Date().toISOString().slice(0, 19).replace('T', ' '),
                                 status: 'Completed'
                               };
                               return {
@@ -5343,7 +5312,7 @@ function App() {
                               </td>
                               <td style={{ padding: '14px 10px' }}>
                                 <span style={{ fontSize: '12px', color: '#9c93a8' }}>
-                                  {new Date(wd.createdAt).toISOString().slice(0, 16).replace('T', ' ')}
+                                  {new Date(wd.createdAt).toISOString().slice(0, 19).replace('T', ' ')}
                                 </span>
                               </td>
                               <td style={{ padding: '14px 10px' }}>
@@ -5422,80 +5391,7 @@ function App() {
 
     return (
       <div id="root" className="dashboard-page-view admin-dashboard animate-fade-in" style={{ background: themeBg, color: themeText, minHeight: '100vh', display: 'flex', flexDirection: 'column', fontFamily: "'Inter', sans-serif" }}>
-        {/* REAL-TIME SUPPORT REQUEST POPUP MODAL */}
-        {supportRequestPrompt && (
-          <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            background: 'rgba(10, 5, 20, 0.85)', backdropFilter: 'blur(8px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: 999999, animation: 'fade-in 0.2s ease-out'
-          }}>
-            <div style={{
-              background: '#120524', border: '2px solid #10b981',
-              borderRadius: '20px', padding: '32px', maxWidth: '480px', width: '90%',
-              display: 'flex', flexDirection: 'column', gap: '20px',
-              boxShadow: '0 20px 50px rgba(16, 185, 129, 0.3)', textAlign: 'center'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}>
-                <span style={{ fontSize: '28px' }}>{supportRequestPrompt.type === 'chat' ? '💬' : '📞'}</span>
-                <span style={{
-                  background: supportRequestPrompt.type === 'chat' ? 'rgba(124, 58, 237, 0.2)' : 'rgba(16, 185, 129, 0.2)',
-                  color: supportRequestPrompt.type === 'chat' ? '#a78bfa' : '#10b981',
-                  padding: '6px 14px', borderRadius: '20px', fontWeight: 800, fontSize: '13px', textTransform: 'uppercase'
-                }}>
-                  {supportRequestPrompt.type === 'chat' ? 'Incoming Chat Request' : 'Incoming Callback Request'}
-                </span>
-              </div>
 
-              <div>
-                <h2 style={{ margin: '0 0 6px', fontSize: '22px', fontWeight: 800, color: '#ffffff' }}>{supportRequestPrompt.userName}</h2>
-                <p style={{ margin: 0, fontSize: '14px', color: '#9c93a8' }}>{supportRequestPrompt.userEmail}</p>
-                {supportRequestPrompt.phone && (
-                  <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#10b981', fontWeight: 600 }}>📞 {supportRequestPrompt.phone}</p>
-                )}
-              </div>
-
-              {/* Countdown Progress Bar */}
-              <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '16px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: 700, marginBottom: '8px', color: promptTimeLeft <= 10 ? '#f43f5e' : '#ffffff' }}>
-                  <span>Action Required</span>
-                  <span>⏳ {promptTimeLeft}s remaining</span>
-                </div>
-                <div style={{ width: '100%', height: '8px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', overflow: 'hidden' }}>
-                  <div style={{
-                    width: `${(promptTimeLeft / 30) * 100}%`, height: '100%',
-                    background: promptTimeLeft <= 10 ? '#f43f5e' : 'linear-gradient(90deg, #10b981, #3b82f6)',
-                    transition: 'width 1s linear'
-                  }} />
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginTop: '8px' }}>
-                <button
-                  onClick={handleDeclineSupportPrompt}
-                  style={{
-                    background: 'transparent', color: '#f43f5e', border: '1.5px solid #f43f5e',
-                    padding: '14px', borderRadius: '12px', fontWeight: 700, fontSize: '15px',
-                    cursor: 'pointer', transition: 'all 0.2s'
-                  }}
-                >
-                  ✖ Decline
-                </button>
-                <button
-                  onClick={handleAcceptSupportPrompt}
-                  style={{
-                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#ffffff',
-                    border: 'none', padding: '14px', borderRadius: '12px', fontWeight: 800, fontSize: '15px',
-                    cursor: 'pointer', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.4)', transition: 'all 0.2s'
-                  }}
-                >
-                  ✓ Accept Request
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
         {execProfile?.settings?.isTempPassword && (
           <div style={{
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -5618,7 +5514,8 @@ function App() {
                 </div>
               </div>
               <h3 style={{ margin: '0 0 4px', fontSize: '18px', fontWeight: 700 }}>{execProfile?.name}</h3>
-              <p style={{ margin: '0 0 16px', fontSize: '13px', color: 'rgba(255,255,255,0.8)' }}>{execProfile?.email}</p>
+              <p style={{ margin: '0 0 4px', fontSize: '13px', color: 'rgba(255,255,255,0.8)' }}>{execProfile?.email}</p>
+              <p style={{ margin: '0 0 16px', fontSize: '12px', color: '#a78bfa', fontWeight: 700 }}>Executive ID: {execProfile?.id}</p>
               
               <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginBottom: '20px' }}>
                 <span style={{ fontSize: '10px', fontWeight: 700, padding: '4px 10px', borderRadius: '20px', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -5637,6 +5534,7 @@ function App() {
             <div style={{ background: themeCardBg, borderRadius: '16px', padding: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: themeCardBorder }}>
               {[
                 { key: 'dashboard', icon: <Home size={18} />, label: 'Dashboard' },
+                { key: 'pending', icon: <Bell size={18} />, label: `Pending Queue (${pendingRequests.length})` },
                 { key: 'callbacks', icon: <Phone size={18} />, label: 'Callback Requests' },
                 { key: 'deposits', icon: <CreditCard size={18} />, label: 'Manual Deposits' },
                 { key: 'attendance', icon: <Calendar size={18} />, label: 'Shift Attendance' },
@@ -5962,171 +5860,11 @@ function App() {
               );
             })()}
 
-            {/* Top Row: Callbacks, Deposits & Chats - shown on dashboard */}
-            {execTab === 'dashboard' && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '24px' }}>
-              
-              {/* Callback Request Queue (Dashboard only) */}
-              {execTab === 'dashboard' && (
-              <div style={{ background: '#ffffff', borderRadius: '16px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e5e7eb' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-                  <div style={{ width: '48px', height: '48px', background: '#f3e8ff', color: '#7c3aed', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Phone size={24} />
-                  </div>
-                  <div style={{ width: '40px', height: '40px', background: '#ffffff', color: '#8b5cf6', borderRadius: '50%', border: '2px solid #f3e8ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <PhoneCall size={20} />
-                  </div>
-                </div>
-                <div style={{ color: '#4b5563', fontSize: '12px', fontWeight: 700, letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: '4px' }}>Callback Request Queue</div>
-                <div style={{ fontSize: '32px', fontWeight: 800, color: '#111827', display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                  {callRequests.filter(req => req.status === 'Pending' || req.status === 'Connected').length} <span style={{ fontSize: '14px', fontWeight: 500, color: '#6b7280', textTransform: 'none' }}>Pending</span>
-                </div>
-                <div style={{ borderTop: '1px solid #e5e7eb', margin: '16px 0', padding: 0 }}></div>
-                
-                {callRequests.some(req => req.status === 'Pending' || req.status === 'Connected') ? (
-                  <div style={{ display: 'grid', gap: '8px', maxHeight: '180px', overflowY: 'auto' }}>
-                    {callRequests.filter(req => req.status === 'Pending' || req.status === 'Connected').map(req => (
-                      <div key={req.id} style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
-                          <div style={{ fontWeight: 700, fontSize: '13px', color: '#111827' }}>{req.userName}</div>
-                          <div style={{ fontSize: '11px', color: '#4f46e5', marginTop: '2px', fontWeight: 600 }}>{req.phone}</div>
-                          <div style={{ fontSize: '10px', color: '#6b7280', marginTop: '4px' }}>{req.userEmail}</div>
-                        </div>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          {req.status === 'Pending' ? (
-                            <button onClick={() => handleUpdateCallStatus(req.id, 'Connected')} style={{ background: '#10b981', border: 'none', color: '#fff', fontSize: '11px', fontWeight: 700, padding: '6px 10px', borderRadius: '4px', cursor: 'pointer' }}>Connect</button>
-                          ) : (
-                            <button onClick={() => handleUpdateCallStatus(req.id, 'Closed')} style={{ background: '#f43f5e', border: 'none', color: '#fff', fontSize: '11px', fontWeight: 700, padding: '6px 10px', borderRadius: '4px', cursor: 'pointer' }}>End Call</button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#6b7280' }}>
-                    <CheckCircle2 size={16} color="#10b981" /> No callback requests in queue. Staff is up to date!
-                  </div>
-                )}
-              </div>
-              )}
 
-              {/* Pending Manual Deposits */}
-              {execTab === 'dashboard' && (
-              <div style={{ background: '#ffffff', borderRadius: '16px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e5e7eb' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-                  <div style={{ width: '48px', height: '48px', background: '#e0f2fe', color: '#0ea5e9', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <CreditCard size={24} />
-                  </div>
-                  <div style={{ width: '40px', height: '40px', background: '#ffffff', color: '#3b82f6', borderRadius: '12px', border: '2px solid #e0f2fe', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <FileText size={20} />
-                  </div>
-                </div>
-                <div style={{ color: '#4b5563', fontSize: '12px', fontWeight: 700, letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: '4px' }}>Pending Manual Deposits</div>
-                <div style={{ fontSize: '32px', fontWeight: 800, color: '#111827', display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                  {pendingDeposits.length} <span style={{ fontSize: '14px', fontWeight: 500, color: '#6b7280', textTransform: 'none' }}>Pending</span>
-                </div>
-                <div style={{ borderTop: '1px solid #e5e7eb', margin: '16px 0', padding: 0 }}></div>
-                
-                {pendingDeposits.length > 0 ? (
-                  <div style={{ display: 'grid', gap: '8px', maxHeight: '180px', overflowY: 'auto' }}>
-                    {pendingDeposits.map(dep => (
-                      <div key={dep.id} style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div style={{ fontWeight: 800, fontSize: '14px', color: '#10b981' }}>₹{dep.amount.toLocaleString()}</div>
-                          <div style={{ fontSize: '10px', color: '#6b7280' }}>{new Date(dep.createdAt).toLocaleString()}</div>
-                        </div>
-                        <div style={{ fontSize: '11px', color: '#374151' }}>UTR: <span style={{ color: '#8b5cf6', fontFamily: 'monospace', fontWeight: 700 }}>{dep.utrNumber}</span></div>
-                        <div style={{ fontSize: '11px', color: '#6b7280' }}>User: {dep.user?.email}</div>
-                        {dep.screenshotUrl && (() => {
-                          const imgUrl = getMediaUrl(dep.screenshotUrl);
-                          return (
-                            <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(59,130,246,0.05)', padding: '6px 10px', borderRadius: '6px', border: '1px solid rgba(59,130,246,0.1)' }}>
-                              <img 
-                                src={imgUrl} 
-                                alt="Payment Proof" 
-                                style={{ width: '44px', height: '44px', borderRadius: '4px', objectFit: 'cover', cursor: 'pointer', border: '1px solid #d1d5db' }} 
-                                onClick={() => setPreviewImageUrl(imgUrl)}
-                                title="Click to zoom screenshot"
-                              />
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                <span style={{ fontSize: '11px', fontWeight: 700, color: '#1d4ed8' }}>Payment Receipt</span>
-                                <button 
-                                  type="button"
-                                  onClick={() => setPreviewImageUrl(imgUrl)}
-                                  style={{ background: 'none', border: 'none', padding: 0, color: '#3b82f6', fontSize: '10px', textDecoration: 'underline', cursor: 'pointer', textAlign: 'left', fontWeight: 600 }}
-                                >
-                                  Click to enlarge 🔍
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })()}
-                        <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-                          <button onClick={() => handleDepositAction(dep.id, 'approve')} style={{ flex: 1, background: '#10b981', border: 'none', color: '#fff', fontSize: '11px', fontWeight: 700, padding: '6px', borderRadius: '4px', cursor: 'pointer' }}>Approve</button>
-                          <button onClick={() => handleDepositAction(dep.id, 'reject')} style={{ flex: 1, background: '#f43f5e', border: 'none', color: '#fff', fontSize: '11px', fontWeight: 700, padding: '6px', borderRadius: '4px', cursor: 'pointer' }}>Reject</button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#6b7280' }}>
-                    <CheckCircle2 size={16} color="#10b981" /> No pending deposits to review.
-                  </div>
-                )}
-              </div>
-              )}
-
-              {/* Active Chat Threads (Dashboard only) */}
-              {execTab === 'dashboard' && (
-              <div style={{ background: '#ffffff', borderRadius: '16px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e5e7eb' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-                  <div style={{ width: '48px', height: '48px', background: '#ecfdf5', color: '#10b981', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <MessageSquare size={24} />
-                  </div>
-                  <div style={{ width: '40px', height: '40px', background: '#ffffff', color: '#10b981', borderRadius: '50%', border: '2px solid #ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <User size={20} />
-                  </div>
-                </div>
-                <div style={{ color: '#4b5563', fontSize: '12px', fontWeight: 700, letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: '4px' }}>Active Chat Threads</div>
-                <div style={{ fontSize: '32px', fontWeight: 800, color: '#111827', display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                  {activeChats.length} <span style={{ fontSize: '14px', fontWeight: 500, color: '#6b7280', textTransform: 'none' }}>Active</span>
-                </div>
-                <div style={{ borderTop: '1px solid #e5e7eb', margin: '16px 0', padding: 0 }}></div>
-                
-                {activeChats.length > 0 ? (
-                  <div style={{ display: 'grid', gap: '8px', maxHeight: '180px', overflowY: 'auto' }}>
-                    {activeChats.map(chat => (
-                      <div key={chat.userEmail} style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ flex: 1, minWidth: 0, marginRight: '8px' }}>
-                          <div style={{ fontWeight: 700, fontSize: '13px', color: '#111827', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{chat.userEmail}</div>
-                          <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{chat.lastText}</div>
-                          <div style={{ fontSize: '9px', color: '#9ca3af', marginTop: '4px' }}>{chat.messageCount} messages · {new Date(chat.lastTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                        </div>
-                        <button 
-                          onClick={() => {
-                            setExecTab('chats');
-                            setSelectedChatEmail(chat.userEmail);
-                          }} 
-                          style={{ background: '#6366f1', border: 'none', color: '#fff', fontSize: '11px', fontWeight: 700, padding: '6px 10px', borderRadius: '4px', cursor: 'pointer', flexShrink: 0 }}
-                        >
-                          Open
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#6b7280' }}>
-                    <CheckCircle2 size={16} color="#10b981" /> No active chat conversations.
-                  </div>
-                )}
-              </div>
-              )}
-            </div>
-            )}
 
             {/* Middle Row: Attendance & Chat Threads */}
-            {(execTab === 'dashboard' || execTab === 'attendance' || execTab === 'chats' || execTab === 'callbacks' || execTab === 'deposits') && (
-            <div style={{ display: 'grid', gridTemplateColumns: (execTab === 'attendance' || execTab === 'chats' || execTab === 'callbacks' || execTab === 'deposits') ? '1fr' : '1fr 2fr', gap: '24px' }}>
+            {(execTab === 'dashboard' || execTab === 'attendance' || execTab === 'chats' || execTab === 'callbacks' || execTab === 'deposits' || execTab === 'pending') && (
+            <div style={{ display: 'grid', gridTemplateColumns: (execTab === 'attendance' || execTab === 'chats' || execTab === 'callbacks' || execTab === 'deposits' || execTab === 'pending') ? '1fr' : '1fr 2fr', gap: '24px' }}>
               
               {/* Shift Attendance - Full width on dashboard (same design as attendance tab) */}
               {execTab === 'dashboard' && (() => {
@@ -6404,6 +6142,77 @@ function App() {
                 );
               })()}
 
+              {/* ================= PENDING REQUESTS QUEUE ================= */}
+              {execTab === 'pending' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <div>
+                      <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#111827', margin: '0 0 6px 0', letterSpacing: '-0.5px' }}>Pending Requests Queue</h2>
+                      <p style={{ fontSize: '14px', color: '#6b7280', margin: 0, fontWeight: 500 }}>Manually claim incoming chat and call requests</p>
+                    </div>
+                    <button 
+                      onClick={fetchPendingRequests}
+                      style={{ padding: '8px 16px', background: '#4f46e5', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}
+                    >
+                      <History size={16} /> Refresh
+                    </button>
+                  </div>
+                  <div style={{ background: themeCardBg, borderRadius: '16px', border: themeCardBorder, overflow: 'hidden' }}>
+                    <div style={{ padding: '16px 24px', borderBottom: '1px solid #e5e7eb', background: '#f9fafb', fontWeight: 600, color: '#374151' }}>
+                      {pendingRequests.length === 0 ? 'No Pending Requests' : `${pendingRequests.length} Pending Request${pendingRequests.length > 1 ? 's' : ''}`}
+                    </div>
+                    <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      {(!isClockedIn || isClockedOut) ? (
+                        <div style={{ textAlign: 'center', color: '#9ca3af', padding: '40px 0' }}>
+                          <LogOut size={48} style={{ opacity: 0.2, marginBottom: '16px' }} />
+                          <div style={{ fontSize: '16px', fontWeight: 500 }}>Please clock in</div>
+                          <div style={{ fontSize: '14px', marginTop: '4px' }}>You must be clocked in to view and claim pending requests.</div>
+                        </div>
+                      ) : pendingRequests.length === 0 ? (
+                        <div style={{ textAlign: 'center', color: '#9ca3af', padding: '40px 0' }}>
+                          <Bell size={48} style={{ opacity: 0.2, marginBottom: '16px' }} />
+                          <div style={{ fontSize: '16px', fontWeight: 500 }}>All caught up!</div>
+                          <div style={{ fontSize: '14px', marginTop: '4px' }}>There are no unassigned requests in the queue right now.</div>
+                        </div>
+                      ) : (
+                        pendingRequests.map((req, idx) => (
+                          <div key={idx} style={{ 
+                            display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
+                            padding: '16px', border: '1px solid #e5e7eb', borderRadius: '12px', background: '#fff'
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                              <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: req.type === 'chat' ? '#eff6ff' : req.type === 'deposit' ? '#fffbeb' : '#f0fdf4', color: req.type === 'chat' ? '#3b82f6' : req.type === 'deposit' ? '#d97706' : '#22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                {req.type === 'chat' ? <MessageSquare size={24} /> : req.type === 'deposit' ? <Wallet size={24} /> : <Phone size={24} />}
+                              </div>
+                              <div>
+                                <div style={{ fontSize: '16px', fontWeight: 700, color: '#111827', marginBottom: '2px' }}>
+                                  {req.userName || req.userEmail}
+                                </div>
+                                <div style={{ fontSize: '13px', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span style={{ fontWeight: 600, color: req.type === 'chat' ? '#3b82f6' : req.type === 'deposit' ? '#d97706' : '#22c55e' }}>{req.type === 'chat' ? 'LIVE CHAT' : req.type === 'deposit' ? `DEPOSIT: ₹${req.amount}` : 'CALLBACK'}</span>
+                                  &bull; {new Date(req.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </div>
+                              </div>
+                            </div>
+                            <button 
+                              onClick={() => handleClaimRequest(req.type, req.id, req.userEmail)}
+                              style={{ 
+                                padding: '10px 24px', background: req.type === 'chat' ? '#3b82f6' : req.type === 'deposit' ? '#d97706' : '#22c55e', color: '#fff', 
+                                border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 700, fontSize: '14px',
+                                transition: 'all 0.2s', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'
+                              }}
+                              onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                              onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                            >
+                              Claim {req.type === 'chat' ? 'Chat' : req.type === 'deposit' ? 'Deposit' : 'Call'}
+                            </button>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
 
 
               {/* ================= CALLBACK REQUESTS PAGE ================= */}
@@ -6511,6 +6320,7 @@ function App() {
                           <thead>
                             <tr style={{ borderBottom: '1px solid #f0f0f5' }}>
                               <th style={{ padding: '16px 20px', fontSize: '12px', fontWeight: 600, color: '#6b7280' }}>Customer Details</th>
+                              <th style={{ padding: '16px 20px', fontSize: '12px', fontWeight: 600, color: '#6b7280' }}>Customer ID</th>
                               <th style={{ padding: '16px 20px', fontSize: '12px', fontWeight: 600, color: '#6b7280' }}>Preferred Time</th>
                               <th style={{ padding: '16px 20px', fontSize: '12px', fontWeight: 600, color: '#6b7280' }}>Request Time</th>
                               <th style={{ padding: '16px 20px', fontSize: '12px', fontWeight: 600, color: '#6b7280' }}>Status</th>
@@ -6552,6 +6362,9 @@ function App() {
                                           <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>{req.phone}</div>
                                         </div>
                                       </div>
+                                    </td>
+                                    <td style={{ padding: '16px 20px' }}>
+                                      <div style={{ fontSize: '12px', fontWeight: 700, color: '#4f46e5' }}>{req.uniqueId || 'N/A'}</div>
                                     </td>
                                     <td style={{ padding: '16px 20px' }}>
                                       <div style={{ fontSize: '12px', color: '#4b5563' }}><Calendar size={12} style={{ display: 'inline', marginRight: '4px', verticalAlign: '-1px' }} /> {dateStr}</div>
@@ -7369,14 +7182,7 @@ function App() {
                         <div style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid #f0f0f5', boxShadow: '0 2px 10px rgba(0,0,0,0.04)', padding: '24px' }}>
                           <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#111827', margin: '0 0 20px 0' }}>Quick Actions</h3>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            {activeChats.find(c => c.userEmail === selectedChatEmail)?.sessionStatus === 'Pending' && (
-                              <button 
-                                onClick={() => handleAcceptChat(selectedChatEmail)} 
-                                style={{ width: '100%', background: '#7c3aed', border: 'none', color: '#ffffff', padding: '10px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer' }}
-                              >
-                                <Check size={14} /> Accept Chat
-                              </button>
-                            )}
+
                             <button 
                               disabled={!selectedChatEmail} 
                               onClick={() => {
@@ -8276,29 +8082,6 @@ function App() {
                   </div>
 
                   <div>
-                    {hasPendingUnlockDeposit ? (
-                      <div style={{
-                        background: 'linear-gradient(135deg, rgba(217, 175, 86, 0.08) 0%, rgba(217, 175, 86, 0.02) 100%)',
-                        border: '1px solid rgba(217, 175, 86, 0.3)',
-                        padding: '16px',
-                        width: '100%',
-                        borderRadius: '12px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '6px',
-                        boxShadow: '0 4px 14px rgba(217, 175, 86, 0.1)'
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ width: '14px', height: '14px', border: '2px solid transparent', borderTopColor: '#d9af56', borderRadius: '50%', display: 'inline-block', animation: 'spin 1s linear infinite' }} />
-                          <span style={{ fontWeight: 'bold', color: '#d9af56', fontSize: '14px' }}>Verification Pending</span>
-                        </div>
-                        <span style={{ fontSize: '11px', color: '#9c93a8', textAlign: 'center', lineHeight: '1.4' }}>
-                          We are verifying your transaction. Your account will unlock automatically.
-                        </span>
-                      </div>
-                    ) : (
                       <button
                         type="button"
                         onClick={() => {
@@ -8324,7 +8107,6 @@ function App() {
                       >
                         Pay ₹10 & Submit UTR
                       </button>
-                    )}
                   </div>
                   </div>
                 </div>
@@ -8562,9 +8344,9 @@ function App() {
                         <tr key={tx.id}>
                           <td className="tx-id-col">{tx.id}</td>
                           <td>
-                            <span className={`tx-type-tag ${tx.type}`}>
+                            <span className={`tx-type-tag ${tx.type === 'refund' ? 'withdrawal' : tx.type}`}>
                               {tx.type === 'deposit' ? <ArrowDownLeft size={12} /> : tx.type === 'buy' ? <Plus size={12} /> : <Minus size={12} />}
-                              {tx.type}
+                              {tx.type === 'refund' ? 'rejected' : tx.type}
                             </span>
                           </td>
                           <td>{getAssetLabel(tx.asset)}</td>
@@ -8689,32 +8471,9 @@ function App() {
                           <span className="currency-symbol">{'\u20b9'}</span>
                           <input type="number" placeholder="Enter amount (min 100)" value={depositAmount} onChange={(e) => setDepositAmount(e.target.value)} />
                         </div>
-                        {hasPendingUnlockDeposit ? (
-                          <div style={{
-                            background: 'linear-gradient(135deg, rgba(217, 175, 86, 0.08) 0%, rgba(217, 175, 86, 0.02) 100%)',
-                            border: '1px solid rgba(217, 175, 86, 0.3)',
-                            padding: '16px',
-                            marginTop: '15px',
-                            width: '100%',
-                            borderRadius: '12px',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '6px',
-                            boxShadow: '0 4px 14px rgba(217, 175, 86, 0.1)'
-                          }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <span style={{ width: '14px', height: '14px', border: '2px solid transparent', borderTopColor: '#d9af56', borderRadius: '50%', display: 'inline-block', animation: 'spin 1s linear infinite' }} />
-                              <span style={{ fontWeight: 'bold', color: '#d9af56', fontSize: '13px' }}>Verification Pending</span>
-                            </div>
-                            <span style={{ fontSize: '10px', color: '#9c93a8', textAlign: 'center', lineHeight: '1.4' }}>
-                              We are verifying your transaction. Your balance will update automatically.
-                            </span>
-                          </div>
-                        ) : (
                           <button 
                             type="button" 
+                            disabled={hasPendingDeposit}
                             onClick={() => {
                               const val = parseFloat(depositAmount);
                               if (!val || val < 100) {
@@ -8724,22 +8483,23 @@ function App() {
                               setShowManualDepositModal(true);
                             }} 
                             style={{ 
-                              marginTop: '15px', width: '100%', padding: '16px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#fff', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold', transition: 'all 0.3s',
-                              boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)'
+                              marginTop: '15px', width: '100%', padding: '16px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#fff', border: 'none', borderRadius: '12px', cursor: hasPendingDeposit ? 'not-allowed' : 'pointer', fontWeight: 'bold', transition: 'all 0.3s',
+                              boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)',
+                              opacity: hasPendingDeposit ? 0.7 : 1
                             }}
                           >
-                            Proceed to Deposit
+                            {hasPendingDeposit ? 'Verifying...' : 'Proceed to Deposit'}
                           </button>
-                        )}
                       </div>
                       <div className="funding-input-group" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                         <button 
                           type="button"
                           className="btn-modal-confirm" 
-                          style={{ marginTop: 'auto', background: 'linear-gradient(135deg, #1f1f2e 0%, #0f0f1a 100%)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '16px', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold' }}
+                          disabled={hasPendingWithdrawal}
+                          style={{ marginTop: 'auto', background: 'linear-gradient(135deg, #1f1f2e 0%, #0f0f1a 100%)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '16px', borderRadius: '12px', cursor: hasPendingWithdrawal ? 'not-allowed' : 'pointer', fontWeight: 'bold', opacity: hasPendingWithdrawal ? 0.7 : 1 }}
                           onClick={() => setShowWithdrawModal(true)}
                         >
-                          Withdraw Funds
+                          {hasPendingWithdrawal ? 'Verifying...' : 'Withdraw Funds'}
                         </button>
                       </div>
                     </div>
@@ -8748,26 +8508,33 @@ function App() {
                 <div className="complete-vault-ledger">
                   <h3>Full Transaction History</h3>
                   <div className="full-ledger-scrollable">
-                    {transactions.filter(tx => tx.type !== 'referral').map((tx) => (
-                      <div key={tx.id} className="ledger-card-item">
+                    {transactions.filter(tx => ['deposit', 'withdrawal', 'refund'].includes(tx.type)).map((tx) => (
+                      <React.Fragment key={tx.id}>
+                      <div className="ledger-card-item">
                         <div className="ledger-item-left">
-                          <div className={`ledger-type-circle ${tx.type === 'refund' ? 'deposit' : tx.type}`}>
+                          <div className={`ledger-type-circle ${tx.type === 'refund' ? 'withdrawal' : tx.type}`}>
                             {tx.type === 'deposit' || tx.type === 'refund' ? <ArrowDownLeft size={16} /> : tx.type === 'withdrawal' ? <ArrowUpRight size={16} /> : <ArrowRightLeft size={16} />}
                           </div>
                           <div>
                             <div className="ledger-item-title">
-                              {tx.type === 'deposit' ? 'Added Funds' : tx.type === 'refund' ? 'Refund (Rejected)' : tx.type === 'withdrawal' ? 'Withdrew Cash' : tx.type === 'buy' ? `Purchased ${getAssetLabel(tx.asset)}` : `Sold ${getAssetLabel(tx.asset)}`}
+                              {tx.type === 'deposit' ? 'Added Funds' : tx.type === 'refund' ? 'Rejected' : tx.type === 'withdrawal' ? 'Withdrew Cash' : tx.type === 'buy' ? `Purchased ${getAssetLabel(tx.asset)}` : `Sold ${getAssetLabel(tx.asset)}`}
                             </div>
                             <div className="ledger-item-date">{tx.date} {'\u2022'} ID: {tx.id}</div>
                           </div>
                         </div>
                         <div className="ledger-item-right">
-                          <div className={`ledger-item-amount ${tx.type === 'refund' ? 'deposit' : tx.type}`}>{tx.type === 'buy' || tx.type === 'withdrawal' ? '-' : '+'}{'\u20b9'}{tx.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                          <div className={`ledger-item-amount ${tx.type === 'refund' ? 'withdrawal' : tx.type}`}>{tx.type === 'buy' || tx.type === 'withdrawal' ? '-' : '+'}{'\u20b9'}{tx.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
                           {tx.weight > 0 && <div className="ledger-item-weight">{tx.weight.toFixed(4)} g</div>}
                         </div>
                       </div>
+                      {tx.details && (
+                        <div style={{ padding: '0 16px 12px 52px', fontSize: '12px', color: '#9ca3af', marginTop: '-8px' }}>
+                          <span style={{ fontWeight: 600 }}>Info:</span> {tx.details}
+                        </div>
+                      )}
+                      </React.Fragment>
                     ))}
-                    {transactions.filter(tx => tx.type !== 'referral').length === 0 && (
+                    {transactions.filter(tx => ['deposit', 'withdrawal', 'refund'].includes(tx.type)).length === 0 && (
                       <div style={{ textAlign: 'center', padding: '30px 0', color: 'rgba(255,255,255,0.3)', fontSize: '13px' }}>No transactions yet.</div>
                     )}
                   </div>
